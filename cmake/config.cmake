@@ -56,6 +56,9 @@ set(USE_CUDA OFF)
 # - /path/to/rocm: use specific path to rocm
 set(USE_ROCM OFF)
 
+# TTILE 
+set(USE_TTILE ON)
+
 # Whether enable SDAccel runtime
 set(USE_SDACCEL OFF)
 
