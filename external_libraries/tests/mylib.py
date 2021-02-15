@@ -14,10 +14,10 @@ import torch
 from torch import nn
 
 batch_size = 1
-height = 7
-width = 7
-in_channels = 50
-out_channels = 50
+height = 4
+width = 4
+in_channels = 3
+out_channels = 3
 
 kernel_h = 3
 kernel_w = 3
@@ -29,7 +29,7 @@ stride_w = 1
 dilation_h = 1
 dilation_w = 1
 
-A = te.placeholder((batch_size, in_channels, height, width), name="A")
+A = te.placeholder((batch_size, in_channels, height + kernel_h - 1, width + kernel_w - 1), name="A")
 W = te.placeholder((out_channels, in_channels, kernel_h, kernel_w), name="W")
 
 Out = te.extern(
@@ -55,26 +55,34 @@ ctx = tvm.cpu(0)
 f = tvm.build(s, [A, W, Out], "llvm -mcpu=core-avx2")
 
 # create A, W, Out
-a = tvm.nd.array(np.random.uniform(size=(batch_size, in_channels, height, width)).astype(A.dtype), ctx)
-w = tvm.nd.array(np.random.uniform(size=(out_channels, in_channels, kernel_h, kernel_w)).astype(W.dtype), ctx)
+
 o = tvm.nd.array(np.zeros((batch_size, out_channels, (height + 2 * pad_h - kernel_h) // stride_h + 1, (width + 2 * pad_w - kernel_w) // stride_w + 1), dtype=Out.dtype), ctx)
+a = tvm.nd.array(np.random.uniform(size=(batch_size, in_channels,  height + kernel_h - 1, width + kernel_w - 1)).astype(A.dtype), ctx)
+w = tvm.nd.array(np.random.uniform(size=(out_channels, in_channels, kernel_h, kernel_w)).astype(W.dtype), ctx)
+
 
 # Run
 f(a, w, o)
 
 
-## Torch ##
-conv = nn.Conv2d(in_channels = in_channels, out_channels = out_channels, kernel_size = 3, stride = 1, padding = 1, bias=False)
+## Conv2d ##
+def conv2d(weight, input, output, batch_size, height, width, in_channels, out_channels, kernel_h, kernel_w, pad_h, pad_w, stride_h, stride_w, dilation_h, dilation_w):
+    for b in range(batch_size):
+        for c in range(out_channels):
+            for y in range((height + 2 * pad_h - kernel_h) // stride_h + 1):
+                for x in range((width + 2 * pad_w - kernel_w) // stride_w + 1):
+                    output[b, c, y, x] = 0
+                    for k in range(in_channels):
+                        for dy in range(kernel_h):
+                            for dx in range(kernel_w):
+                                output[b, c, y, x] += input[b, k, stride_w * y + dy, stride_h * x + dx] * weight[c, k, dy, dx]
+    return output
 
-input = torch.from_numpy(a.asnumpy())
-weight = torch.from_numpy(w.asnumpy())
+output_conv2d = conv2d(w.asnumpy(), a.asnumpy(), o.asnumpy(), batch_size, height, width, in_channels, out_channels, kernel_h, kernel_w, pad_h, pad_w, stride_h, stride_w, dilation_h, dilation_w)
 
-conv.weight.data = weight
-
-output_torch = conv(input).detach().numpy()
 
 # Verify the Result
-tvm.testing.assert_allclose(o.asnumpy(), output_torch, rtol=1e-5)
+tvm.testing.assert_allclose(o.asnumpy(), output_conv2d, rtol=1e-5)
 
 ######################################################################
 # Evaluate the Result
