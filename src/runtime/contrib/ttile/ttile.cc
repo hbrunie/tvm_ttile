@@ -39,8 +39,8 @@ struct TtileCon2dSOp {
   void operator()(float * I, float * W, float * O, int batch_size, int height, int width, int in_channels, int out_channels, int kernel_h, int kernel_w, int pad_h, int pad_w, int stride_h, int stride_w, int dilation_h, int dilation_w ) {
 
     ttile_conv2d(W, I, O, 
-    stride_w, 
-    stride_h, 
+    kernel_w, 
+    kernel_h, 
     in_channels, 
     out_channels, 
     width, 
