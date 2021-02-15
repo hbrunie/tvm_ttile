@@ -14,10 +14,10 @@ import torch
 from torch import nn
 
 batch_size = 1
-height = 4
-width = 4
-in_channels = 3
-out_channels = 3
+height = 7
+width = 7
+in_channels = 512
+out_channels = 512
 
 kernel_h = 3
 kernel_w = 3
