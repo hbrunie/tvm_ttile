@@ -1,0 +1,6 @@
+if(USE_TTILE)
+    find_library(TTILE_LIBRARY ttile)
+    list(APPEND TVM_RUNTIME_LINKER_LIBS ${TTILE_LIBRARY})
+    list(APPEND RUNTIME_SRCS src/runtime/contrib/ttile/ttile.cc)
+    message(STATUS "Using Ttile library " ${TTILE_LIBRARY})
+endif(USE_TTILE)
