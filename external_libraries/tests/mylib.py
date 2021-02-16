@@ -10,9 +10,6 @@ from tvm import topi
 from tvm import te
 from tvm.relay import testing
 
-import torch
-from torch import nn
-
 batch_size = 1
 height = 7
 width = 7
