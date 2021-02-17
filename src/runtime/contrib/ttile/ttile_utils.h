@@ -36,7 +36,6 @@ inline void CallTtile(TVMArgs args, TVMRetValue* ret, TTtileOp op) {
   int stride_w = args[13]; 
   int dilation_h = args[14]; 
   int dilation_w = args[15];
-
 op(
 static_cast<float*>(I->data), static_cast<float*>(W->data), static_cast<float*>(O->data),
 batch_size, height, width, in_channels, out_channels, kernel_h, kernel_w, pad_h, pad_w, stride_h, stride_w, dilation_h, dilation_w
