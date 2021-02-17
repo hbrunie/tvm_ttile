@@ -13,8 +13,8 @@ from tvm.relay import testing
 batch_size = 1
 height = 7
 width = 7
-in_channels = 512
-out_channels = 512
+in_channels = 100
+out_channels = 100
 
 kernel_h = 3
 kernel_w = 3
@@ -86,5 +86,19 @@ tvm.testing.assert_allclose(o.asnumpy(), output_conv2d, rtol=1e-5)
 # -----------------
 #
 
-evaluator = f.time_evaluator(f.entry_name, ctx, number=1)
+evaluator = f.time_evaluator(f.entry_name, ctx, number=10)
+print("My Convolution: %f ms" % (evaluator(a, w, o).mean * 1e3))
+
+
+from tvm.contrib import ttile
+
+O = ttile.conv2d(A, W, batch_size, height, width, in_channels, out_channels, kernel_h, kernel_w, pad_h, pad_w, stride_h, stride_w, dilation_h, dilation_w)
+s = te.create_schedule(O.op)
+
+f = tvm.build(s, [A, W, O], "llvm")
+f(a, w, o)
+
+tvm.testing.assert_allclose(o.asnumpy(), output_conv2d, rtol=1e-5)
+
+evaluator = f.time_evaluator(f.entry_name, ctx, number=10)
 print("My Convolution: %f ms" % (evaluator(a, w, o).mean * 1e3))
