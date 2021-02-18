@@ -108,6 +108,12 @@ def conv2d_strategy_cpu(attrs, inputs, out_type, target):
                     wrap_topi_schedule(topi.x86.schedule_conv2d_nchw_int8),
                     name="conv2d_nchw_int8.x86",
                 )
+            elif "ttile" in target.libs:
+                strategy.add_implementation(
+                    wrap_compute_conv2d(topi.x86.conv2d_ttile),
+                    wrap_topi_schedule(topi.x86.schedule_conv2d_ttile),
+                    name="conv2d_ttile.x86",
+                )
             else:
                 strategy.add_implementation(
                     wrap_compute_conv2d(topi.x86.conv2d_nchw),
