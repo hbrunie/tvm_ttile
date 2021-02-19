@@ -1,14 +1,13 @@
 from __future__ import absolute_import, print_function
 from scipy import signal
-import tvm
-from tvm import te
 import numpy as np
-import tvm.testing
 import scipy
-from tvm import relay
-from tvm import topi
-from tvm import te
+
+import tvm
+import tvm.testing
+from tvm import relay, topi, te
 from tvm.relay import testing
+
 
 batch_size = 1
 height = 7
@@ -46,6 +45,22 @@ print(tvm.lower(s, [A, W, Out]))
 # -----------------
 # We can verify that the result matches what we expected.
 #
+import importlib
+importlib.reload(tvm)
+import os
+from tvm import _ffi
+from tvm import relay, topi, te
+from tvm.relay import testing
+
+
+from scipy import signal
+import numpy as np
+import scipy
+
+import tvm
+import tvm.testing
+from tvm import relay, topi, te
+from tvm.relay import testing
 
 ## TVM ##
 ctx = tvm.cpu(0)
@@ -86,19 +101,19 @@ tvm.testing.assert_allclose(o.asnumpy(), output_conv2d, rtol=1e-5)
 # -----------------
 #
 
-evaluator = f.time_evaluator(f.entry_name, ctx, number=10)
-print("My Convolution: %f ms" % (evaluator(a, w, o).mean * 1e3))
+# evaluator = f.time_evaluator(f.entry_name, ctx, number=10)
+# print("My Convolution: %f ms" % (evaluator(a, w, o).mean * 1e3))
 
 
-from tvm.contrib import ttile
+# from tvm.contrib import ttile
 
-O = ttile.conv2d(A, W, batch_size, height, width, in_channels, out_channels, kernel_h, kernel_w, pad_h, pad_w, stride_h, stride_w, dilation_h, dilation_w)
-s = te.create_schedule(O.op)
+# O = ttile.conv2d(A, W, batch_size, height, width, in_channels, out_channels, kernel_h, kernel_w, pad_h, pad_w, stride_h, stride_w, dilation_h, dilation_w)
+# s = te.create_schedule(O.op)
 
-f = tvm.build(s, [A, W, O], "llvm")
-f(a, w, o)
+# f = tvm.build(s, [A, W, O], "llvm")
+# f(a, w, o)
 
-tvm.testing.assert_allclose(o.asnumpy(), output_conv2d, rtol=1e-5)
+# tvm.testing.assert_allclose(o.asnumpy(), output_conv2d, rtol=1e-5)
 
-evaluator = f.time_evaluator(f.entry_name, ctx, number=10)
-print("My Convolution: %f ms" % (evaluator(a, w, o).mean * 1e3))
+# evaluator = f.time_evaluator(f.entry_name, ctx, number=10)
+# print("My Convolution: %f ms" % (evaluator(a, w, o).mean * 1e3))
