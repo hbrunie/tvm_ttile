@@ -34,7 +34,7 @@ def dense(N, L, M, dtype, target):
 
         num_thread = 16
 
-        cfg = autotvm.get_config() ##### TODO ici le pb
+        cfg = autotvm.get_config()
 
         in_dim = 512
         cfg.define_split("tile_k", in_dim, num_outputs=2)
@@ -72,8 +72,8 @@ def dense(N, L, M, dtype, target):
 N, L, M = 512, 512, 512
 dtype = "float32"
 
-# target='opencl -device=kmppa -max_num_threads=16'
-target='llvm'
+target='opencl -device=kmppa -max_num_threads=16'
+# target='llvm'
 
 
 with tvm.target.Target(target):
@@ -81,14 +81,17 @@ with tvm.target.Target(target):
     func = tvm.build(s, arg_bufs)
 
 ##################
-
+ctx = tvm.context(target)
 #INPUTS
 a_np = np.random.uniform(size=(N, L)).astype(np.float32)
 b_np = np.random.uniform(size=(L, M)).astype(np.float32)
 c_np = a_np.dot(np.transpose(b_np))
 
+
 #TEST THE RESULT
-c_tvm = tvm.nd.empty(c_np.shape)
-func(tvm.nd.array(a_np), tvm.nd.array(b_np), c_tvm)
+c_tvm = tvm.nd.empty(c_np.shape, ctx=ctx)
+a_tvm = tvm.nd.array(a_np, ctx=ctx)
+b_tvm = tvm.nd.array(b_np, ctx=ctx)
+func(a_tvm, b_tvm, c_tvm)
 print(c_tvm.asnumpy())
 tvm.testing.assert_allclose(c_np, c_tvm.asnumpy(), rtol=1e-2)
