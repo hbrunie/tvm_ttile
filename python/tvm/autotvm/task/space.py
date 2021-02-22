@@ -162,6 +162,10 @@ def get_factors(n):
         List of all factors
     """
     step = 2 if n % 2 else 1
+
+    if n < 0:
+        return [0]
+
     ret = list(
         set(
             functools.reduce(
