@@ -28,31 +28,10 @@ s = te.create_schedule(C.op)
 
 num_thread = 16
 
-A, _ = C.op.input_tensors
-_, in_dim = get_const_tuple(A.shape)
-
 in_dim = 512
-cfg.define_split("tile_k", in_dim, num_outputs=2)
-if cfg.is_fallback:
-    cfg["tile_k"] = SplitEntity([-1, num_thread] if in_dim > num_thread else [1, num_thread])
 
-_, kf = cfg["tile_k"].apply(s, C, C.op.reduce_axis[0])
-CF = s.rfactor(C, kf)
-
-if C.op in s.outputs:
-    Out = C
-else:
-    Out = s.outputs[0].output(0)
-    s[C].compute_at(s[Out], s[Out].op.axis[1])
-s[Out].bind(s[Out].op.axis[0], te.thread_axis("blockIdx.y"))
-s[Out].bind(s[Out].op.axis[1], te.thread_axis("blockIdx.x"))
-
-tx = s[C].op.reduce_axis[0]
-thread_x = te.thread_axis("threadIdx.x")
-s[C].bind(tx, thread_x)
-s[CF].compute_at(s[C], tx)
-s[C].set_store_predicate(thread_x.var.equal(0))
-s[Out].set_store_predicate(thread_x.var.equal(0))
+s[C].bind(s[C].op.axis[0], te.thread_axis("blockIdx.y"))
+s[C].bind(s[C].op.axis[1], te.thread_axis("blockIdx.x"))
 
 #################
 
