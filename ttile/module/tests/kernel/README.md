@@ -76,4 +76,4 @@ __kernel void default_function_kernel0(__global float* restrict B, __global floa
 | Kernel3 | 2065              |
 | Kernel4 | 27377             |
 
-In comparison the same convolution without optimisation on x86 (Intel(R) Core(TM) i7-3820 CPU @ 3.60GHz) is execute in 242 ms.
+In comparison the same convolution (cpu.py) without optimisation on x86 (Intel(R) Core(TM) i7-3820 CPU @ 3.60GHz) is execute in 242 ms.
