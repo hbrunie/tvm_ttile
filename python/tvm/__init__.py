@@ -53,7 +53,7 @@ from . import target
 from . import te
 
 # tvm.driver
-from .driver import build, lower
+from .driver import build, lower, build_ttile
 
 # tvm.parser
 from . import parser

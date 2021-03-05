@@ -369,6 +369,7 @@ def build(inputs, args=None, target=None, target_host=None, name="default_functi
     ----
     See the note on :any:`tvm.target` on target string format.
     """
+    print("build module")
     if isinstance(inputs, schedule.Schedule):
         if args is None:
             raise ValueError("args must be given for build from schedule")
@@ -421,4 +422,127 @@ def build(inputs, args=None, target=None, target_host=None, name="default_functi
     for mdev in device_modules:
         if mdev:
             rt_mod_host.import_module(mdev)
+    return rt_mod_host
+
+
+def build_ttile(inputs, args=None, target=None, target_host=None, name="default_function", binds=None):
+    """Build a function with arguments as signature. Code will be generated
+    for devices coupled with target information.
+
+    Parameters
+    ----------
+    inputs : tvm.te.Schedule, IRModule, or dict of target to IRModule
+        The schedule to be built
+
+    args : list of Buffer or Tensor or Var, optional
+        The argument lists to the function.
+
+    target : str or :any:`tvm.target.Target`, optional
+        The target and option of the compilation.
+
+    target_host : str or :any:`tvm.target.Target` optional
+        Host compilation target, if target is device.
+        When TVM compiles device specific program such as CUDA,
+        we also need host(CPU) side code to interact with the driver
+        setup the dimensions and parameters correctly.
+        target_host is used to specify the host side codegen target.
+        By default, llvm is used if it is enabled,
+        otherwise a stackvm intepreter is used.
+
+    name : str, optional
+        The name of result function.
+
+    binds : dict, optional
+        Dictionary that maps the binding of symbolic buffer to Tensor.
+        By default, a new buffer is created for each tensor in the argument.
+
+    Returns
+    -------
+    ret : tvm.module
+        A module that combines both host and device code.
+
+    Examples
+    ________
+    There are two typical example uses of this function depending on the type
+    of the argument `inputs`:
+    1. it is an IRModule.
+
+    .. code-block:: python
+
+        n = 2
+        A = te.placeholder((n,), name='A')
+        B = te.placeholder((n,), name='B')
+        C = te.compute(A.shape, lambda *i: A(*i) + B(*i), name='C')
+        s = tvm.te.create_schedule(C.op)
+        m = tvm.lower(s, [A, B, C], name="test_add")
+        rt_mod = tvm.build(m, target="llvm")
+
+    2. it is a dict of compilation target to IRModule.
+
+    .. code-block:: python
+
+        n = 2
+        A = te.placeholder((n,), name='A')
+        B = te.placeholder((n,), name='B')
+        C = te.compute(A.shape, lambda *i: A(*i) + B(*i), name='C')
+        s1 = tvm.te.create_schedule(C.op)
+        with tvm.target.cuda() as cuda_tgt:
+          s2 = topi.cuda.schedule_injective(cuda_tgt, [C])
+          m1 = tvm.lower(s1, [A, B, C], name="test_add1")
+          m2 = tvm.lower(s2, [A, B, C], name="test_add2")
+          rt_mod = tvm.build({"llvm": m1, "cuda": m2}, target_host="llvm")
+
+    Note
+    ----
+    See the note on :any:`tvm.target` on target string format.
+    """
+    if isinstance(inputs, schedule.Schedule):
+        if args is None:
+            raise ValueError("args must be given for build from schedule")
+        input_mod = lower(inputs, args, name=name, binds=binds)
+    elif isinstance(inputs, (list, tuple, container.Array)):
+        merged_mod = tvm.IRModule({})
+        for x in inputs:
+            merged_mod.update(x)
+        input_mod = merged_mod
+    elif isinstance(inputs, tvm.IRModule):
+        input_mod = inputs
+    elif not isinstance(inputs, (dict, container.Map)):
+        raise ValueError("inputs must be Schedule, IRModule or dict of target to IRModule")
+
+    if not isinstance(inputs, (dict, container.Map)):
+        target = Target.current() if target is None else target
+        target = target if target else "llvm"
+        target_input_mod = {target: input_mod}
+    else:
+        target_input_mod = inputs
+
+    for tar, mod in target_input_mod.items():
+        if not isinstance(tar, (str, Target)):
+            raise ValueError("The key of inputs must be str or " "Target when inputs is dict.")
+        if not isinstance(mod, tvm.IRModule):
+            raise ValueError("inputs must be Schedule, IRModule," "or dict of str to IRModule.")
+
+    if not target_host:
+        for tar, _ in target_input_mod.items():
+            tar = Target(tar)
+            device_type = ndarray.context(tar.kind.name, 0).device_type
+            if device_type == ndarray.cpu(0).device_type:
+                target_host = tar
+                break
+    if not target_host:
+        target_host = "llvm" if tvm.runtime.enabled("llvm") else "stackvm"
+
+    mod_host_all = tvm.IRModule({})
+
+    device_modules = []
+    for tar, input_mod in target_input_mod.items():
+        mod_host, mdev = _build_for_device(input_mod, tar, target_host)
+        mod_host_all.update(mod_host)
+        device_modules.append(mdev)
+
+    # Generate a unified host module.
+    rt_mod_host = codegen.build_module(mod_host_all, target_host)
+
+    # Import all modules.
     return rt_mod_host
