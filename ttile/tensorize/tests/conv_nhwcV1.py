@@ -49,20 +49,14 @@ Out = te.compute(
     )
 s = te.create_schedule(Out.op)
 
-# print("ici", Out.shape)
 
 axe_batch, axe_xx, axe_yy, axe_out_channels = Out.op.axis
 axe_in_channels, axe_kernel_h, axe_kernel_w = Out.op.reduce_axis
-
-# factor = 16
-
 
 axe_out_channelso, axe_out_channelsi = s[Out].split(axe_out_channels, factor=out_channels)
 axe_yyo, axe_yyi = s[Out].split(axe_yy, factor=out_h)
 axe_xxo, axe_xxi = s[Out].split(axe_xx, factor=out_w)
 axe_in_channelso, axe_in_channelsi = s[Out].split(axe_in_channels, factor=in_channels)
-# axe_kernel_ho, axe_kernel_hi = s[Out].split(axe_kernel_h, factor=factor)
-# axe_kernel_wo, axe_kernel_wi = s[Out].split(axe_kernel_w, factor=factor)
 
 s[Out].reorder(axe_batch, axe_out_channelso, axe_yyo, axe_xxo, axe_in_channelso, axe_out_channelsi, axe_yyi, axe_xxi, axe_in_channelsi, axe_kernel_h, axe_kernel_w)
 # print(tvm.lower(s, [A, W, Out], simple_mode=True))
@@ -74,7 +68,7 @@ def generate_ttile_conv2d():
 extern "C" {
     """
 
-    file_ = open("ex.c", "r")
+    file_ = open("convV1.c", "r")
     cc_code_midle = file_.read()
     file_.close()
 
@@ -138,7 +132,6 @@ def intrin_gemv(W, H, C, F, X, Y):
 
     a = te.placeholder((1, X + H - 1, Y + W - 1, C), name="a")
     w = te.placeholder((W, H, C, F), name="b")
-    # o = te.placeholder((1, F, Y + 2 - W, X + 2 - H), name="b")
     
     axe_in_channels = te.reduce_axis((0, C), name="axe_in_channels")
     axe_kernel_h = te.reduce_axis((0, H), name="axe_kernel_h")
@@ -155,8 +148,6 @@ def intrin_gemv(W, H, C, F, X, Y):
     strideC1 = tvm.te.var("sC1")
     strideC2 = tvm.te.var("sC2")
     strideC3 = tvm.te.var("sC3")
-
-    # print((1, F, Y + 2 - W, X + 2 - H))
 
     o = te.compute(
     (1, X, Y, F),
@@ -216,7 +207,6 @@ def intrin_gemv(W, H, C, F, X, Y):
     return te.decl_tensor_intrin(o.op, intrin_func, binds={a: Ab, w: Ww, o: Oo})
 
 
-# gemv = intrin_gemv(kernel_h, kernel_w, factor, factor, factor, factor)
 gemv = intrin_gemv(kernel_h, kernel_w, in_channels, out_channels, width, height)
 s[Out].tensorize(axe_out_channelsi, gemv)
 s[Out].pragma(axe_batch, "import_llvm", conv_impl())
@@ -225,8 +215,6 @@ print(tvm.lower(s, [A, W, Out], simple_mode=True))
 
 
 func = tvm.build(s, [A, W, Out], target="llvm -mcpu=core-avx2", name="conv")
-# a = np.ones(get_const_tuple(A.shape), dtype="float32")
-# w = np.ones(get_const_tuple(W.shape), dtype="float32")
 
 a = tvm.nd.array(np.random.uniform(size=(batch_size, width + kernel_w - 1, height + kernel_h - 1, in_channels)).astype(A.dtype), ctx)
 w = tvm.nd.array(np.random.uniform(size=(kernel_w, kernel_h, in_channels, out_channels)).astype(W.dtype), ctx)
@@ -259,9 +247,6 @@ Out = te.extern(
 )
 s = te.create_schedule(Out.op)
 
-
-# a = tvm.nd.array(np.random.uniform(size=(batch_size, width + kernel_w - 1, height + kernel_h - 1, in_channels)).astype(A.dtype), ctx)
-# w = tvm.nd.array(np.random.uniform(size=(kernel_w, kernel_h, in_channels, out_channels)).astype(W.dtype), ctx)
 o = tvm.nd.array(np.zeros(get_const_tuple(Out.shape), dtype=dtype), ctx)
 
 ctx = tvm.cpu(0)
@@ -275,7 +260,6 @@ external_result = oo.asnumpy()
 
 tvm.testing.assert_allclose(tensorize_result, external_result, rtol=1e-5)
 
-print("ok")
 
 o = tvm.nd.array(np.zeros(get_const_tuple(Out.shape), dtype=dtype), ctx)
 def conv2d(weight, input_, output, batch_size, height, width, in_channels, out_channels, kernel_h, kernel_w, pad_h, pad_w, stride_h, stride_w, dilation_h, dilation_w):
@@ -290,11 +274,10 @@ def conv2d(weight, input_, output, batch_size, height, width, in_channels, out_c
                                 output[b, x, y, c] += input_[b, stride_h * x + dx, stride_w * y + dy, k] * weight[dx, dy, k, c]
     return output
 
-output_conv2d = conv2d(w.asnumpy(), a.asnumpy(), o.asnumpy(), batch_size, height, width, in_channels, out_channels, kernel_h, kernel_w, pad_h, pad_w, stride_h, stride_w, dilation_h, dilation_w)
-print(output_conv2d)
+# output_conv2d = conv2d(w.asnumpy(), a.asnumpy(), o.asnumpy(), batch_size, height, width, in_channels, out_channels, kernel_h, kernel_w, pad_h, pad_w, stride_h, stride_w, dilation_h, dilation_w)
 
 evaluator = f.time_evaluator(f.entry_name, ctx, number=50)
 print("My Convolution with external library: %f ms" % (evaluator(a, w, o).mean * 1e3))
 
 
-tvm.testing.assert_allclose(output_conv2d, external_result, rtol=1e-5)
+# tvm.testing.assert_allclose(output_conv2d, external_result, rtol=1e-5)

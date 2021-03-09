@@ -49,7 +49,6 @@ Out = te.compute(
     )
 s = te.create_schedule(Out.op)
 
-# print("ici", Out.shape)
 
 axe_batch, axe_xx, axe_yy, axe_out_channels = Out.op.axis
 axe_in_channels, axe_kernel_h, axe_kernel_w = Out.op.reduce_axis
@@ -74,7 +73,7 @@ def generate_ttile_conv2d():
 extern "C" {
     """
 
-    file_ = open("ex2.c", "r")
+    file_ = open("convV2.c", "r")
     cc_code_midle = file_.read()
     file_.close()
 
@@ -138,7 +137,6 @@ def intrin_gemv(W, H, C, F, X, Y):
 
     a = te.placeholder((1, X + H - 1, Y + W - 1, C), name="a")
     w = te.placeholder((W, H, C, F), name="b")
-    # o = te.placeholder((1, F, Y + 2 - W, X + 2 - H), name="b")
     
     axe_in_channels = te.reduce_axis((0, C), name="axe_in_channels")
     axe_kernel_h = te.reduce_axis((0, H), name="axe_kernel_h")
@@ -155,8 +153,6 @@ def intrin_gemv(W, H, C, F, X, Y):
     strideC1 = tvm.te.var("sC1")
     strideC2 = tvm.te.var("sC2")
     strideC3 = tvm.te.var("sC3")
-
-    # print((1, F, Y + 2 - W, X + 2 - H))
 
     o = te.compute(
     (1, X, Y, F),
@@ -223,7 +219,6 @@ def intrin_gemv(W, H, C, F, X, Y):
     return te.decl_tensor_intrin(o.op, intrin_func, binds={a: Ab, w: Ww, o: Oo})
 
 
-# gemv = intrin_gemv(kernel_h, kernel_w, factor, factor, factor, factor)
 gemv = intrin_gemv(kernel_h, kernel_w, factor_in_channels, factor_out_channels, factor_xx, factor_yy)
 s[Out].tensorize(axe_yyi, gemv)
 s[Out].pragma(axe_batch, "import_llvm", conv_impl())
@@ -232,8 +227,6 @@ print(tvm.lower(s, [A, W, Out], simple_mode=True))
 
 
 func = tvm.build(s, [A, W, Out], target="llvm -mcpu=core-avx2", name="conv")
-# a = np.ones(get_const_tuple(A.shape), dtype="float32")
-# w = np.ones(get_const_tuple(W.shape), dtype="float32")
 
 a = tvm.nd.array(np.random.uniform(size=(batch_size, width + kernel_w - 1, height + kernel_h - 1, in_channels)).astype(A.dtype), ctx)
 w = tvm.nd.array(np.random.uniform(size=(kernel_w, kernel_h, in_channels, out_channels)).astype(W.dtype), ctx)
@@ -248,8 +241,6 @@ print("My Convolution with tensorize: %f ms" % (evaluator(a, w, o).mean * 1e3))
 
 A = te.placeholder((batch_size, width + kernel_w - 1, height + kernel_h - 1, in_channels), name="A")
 W = te.placeholder((kernel_w, kernel_h, in_channels, out_channels), name="W")
-
-
 
 axe_in_channels = te.reduce_axis((0, in_channels), name="axe_in_channels")
 axe_kernel_h = te.reduce_axis((0, kernel_h), name="axe_kernel_h")
