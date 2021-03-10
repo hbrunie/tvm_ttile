@@ -5,12 +5,15 @@
 |--------- |:------------------------:|:---------------------------:|
 | 1        | 12.15                    |         13.31               |
 | 2        |          1.32            |                13.17        |
-| 3        |                          |                             |
-| 4        |                          |                             |
 
 
 The time for V2 is better because of the reorder loop in the cc_code
 
+| Version                            | Time  (ms) |
+|----------------------------------- |:----------:|
+| external library                   |  ~30       |
+| replace all code with tensorize    |  ~30       |
+| tensorize                          |  ~30       |
 
 
 # Replace all the code
