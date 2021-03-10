@@ -69,11 +69,13 @@ __kernel void default_function_kernel0(__global float* restrict B, __global floa
 }
 ```
 
-| Kernel  | Time on mppa (ms) |
-|-------- |:-----------------:|
-| Kernel1 | 1963              |
-| Kernel2 | 2229              |
-| Kernel3 | 2065              |
-| Kernel4 | 27377             |
+| Kernel   | Time on mppa (ms) |
+|--------  |:-----------------:|
+| Kernel1  | 1963              |
+| Kernel2  | 2229              |
+| Kernel3  | 2065              |
+| Kernel4x | 26993             |
+| Kernel4y | 26787             |
+| Kernel4z | 26838             |
 
 In comparison the same convolution (cpu.py) without optimisation on x86 (Intel(R) Core(TM) i7-3820 CPU @ 3.60GHz) is execute in 242 ms.
