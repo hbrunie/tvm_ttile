@@ -5,7 +5,7 @@
 
 ```sh
 
-gcc -o ttile.o -c ttile.c
+gcc -o ttile.o -c ttile.c -mavx2 -mfma -O3
 gcc -shared -o libttile.so ttile.o -lm
 sudo mv libttile.so /usr/lib/
 
