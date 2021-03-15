@@ -33,6 +33,18 @@ target = "llvm -libs=ttile"
 
 ## Add an external library to TVM
 
+### Create the library
+
+```sh
+
+gcc -o ttile.o -c ttile.c -mavx2 -mfma -O3
+gcc -shared -o libttile.so ttile.o -lm
+sudo mv libttile.so /usr/lib/
+
+```
+
+### To use te.extern
+
 - Create a folder NAME_LIBRARY in src/runtime/contrib/
 
 Please see https://github.com/S12P/tvm_ttile/tree/x86/src/runtime/contrib/ttile
@@ -66,13 +78,13 @@ include(cmake/modules/contrib/TTILE.cmake)
 TVM_INFO_USE_TTILE="${USE_TTILE}"
 ```
 
-### To use import tvm.contrib.ttile
+### To use import tvm.contrib.ttile (you need to do part te.extern)
 
 - Add python/tvm/contrib/<NAME_LIBRARY>.py
 
 Please see https://github.com/S12P/tvm_ttile/blob/x86/python/tvm/contrib/ttile.py
 
-## To use -libs=ttile
+## To use -libs=ttile (you need to do part te.extern)
 
 - Add information of your library in python/tvm/topi/x86/__init__.py
 
