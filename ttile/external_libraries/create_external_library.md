@@ -68,17 +68,18 @@ TVM_INFO_USE_TTILE="${USE_TTILE}"
 
 ### To use import tvm.contrib.ttile
 
-- add python/tvm/contrib/<NAME_LIBRARY>.py
+- Add python/tvm/contrib/<NAME_LIBRARY>.py
+
 Please see https://github.com/S12P/tvm_ttile/blob/x86/python/tvm/contrib/ttile.py
 
 ## To use -libs=ttile
 
-- Add import of your library in python/tvm/topi/x86/__init__.py
+- Add information of your library in python/tvm/topi/x86/__init__.py
 
 ```python
 from .conv2d_ttile import *
 ```
-- add startegy in python/tvm/relay/op/strategy/x86.py
+- Add startegy in python/tvm/relay/op/strategy/x86.py
 ```python
 elif "ttile" in target.libs:
                 strategy.add_implementation(
@@ -88,7 +89,7 @@ elif "ttile" in target.libs:
                 )
 ```
 
-- add file to python/tvm/topi/x86/<NAME_FUNCTION>_<NAME_LIBRARY>.py
+- Add file to python/tvm/topi/x86/<NAME_FUNCTION>_<NAME_LIBRARY>.py
 
 Please see https://github.com/S12P/tvm_ttile/blob/x86/python/tvm/topi/x86/conv2d_ttile.py
 
