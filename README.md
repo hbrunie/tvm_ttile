@@ -1,3 +1,34 @@
+The goal of this work is to use [TTile](https://hal.archives-ouvertes.fr/hal-03149553) in Apache TVM.
+
+The work is done on x86 and mppa. Please look at the [x86](https://github.com/S12P/tvm_ttile/tree/x86) and [mppa](https://github.com/S12P/tvm_ttile/tree/mppa) branches and in particular the TTile folder.
+
+## Installation
+
+```sh
+git clone --recursive git@github.com:S12P/tvm_ttile.git
+git submodule init
+git submodule update
+
+sudo apt-get update
+sudo apt-get install -y python3 python3-dev python3-setuptools gcc libtinfo-dev zlib1g-dev build-essential cmake libedit-dev libxml2-dev
+
+mkdir build
+cp cmake/config.cmake build
+
+cd build
+cmake ..
+make -j4
+
+export TVM_HOME=<PATH_TO_TVM_FOLDER>
+export PYTHONPATH=$TVM_HOME/python:${PYTHONPATH}
+
+```
+
+Please see https://tvm.apache.org/docs/install/from_source.html for more details.
+
+
+
+
 <!--- Licensed to the Apache Software Foundation (ASF) under one -->
 <!--- or more contributor license agreements.  See the NOTICE file -->
 <!--- distributed with this work for additional information -->
