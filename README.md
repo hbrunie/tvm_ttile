@@ -5,7 +5,7 @@ The work is done on x86 and mppa. Please look at the [x86](https://github.com/S1
 ## Installation
 
 ```sh
-git clone --recursive 
+git clone --recursive git@github.com:S12P/tvm_ttile.git
 git submodule init
 git submodule update
 
