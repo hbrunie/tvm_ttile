@@ -12,3 +12,8 @@ We have different options to use [TTile](https://hal.archives-ouvertes.fr/hal-03
 * Module technique used for "tensorize" on mppa
 
 Please find in each folder more details and examples.
+
+
+## Examples
+
+The folder example contains some examples that you can use on mppa.
