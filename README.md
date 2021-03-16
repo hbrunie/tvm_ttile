@@ -19,6 +19,9 @@ cd build
 cmake ..
 make -j4
 
+export TVM_HOME=<PATH_TO_TVM_FOLDER>
+export PYTHONPATH=$TVM_HOME/python:${PYTHONPATH}
+
 ```
 
 Please see https://tvm.apache.org/docs/install/from_source.html for more details.
