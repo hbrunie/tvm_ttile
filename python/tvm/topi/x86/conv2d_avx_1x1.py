@@ -73,7 +73,7 @@ def _schedule_conv_NCHWc(s, cfg, data_vec, kernel_vec, conv_out, last):
         batch, ic_chunk, ih, iw, ic_block = s[data_vec].op.axis
         s[data_vec].vectorize(ic_block)
         parallel_axis = s[data_vec].fuse(batch, ic_chunk, ih)
-        s[data_vec].parallel(parallel_axis)
+        # s[data_vec].parallel(parallel_axis)
         data_vec = data_vec.op.input_tensors[0]
 
     oc_bn = cfg["tile_oc"].size[-1]
@@ -83,14 +83,14 @@ def _schedule_conv_NCHWc(s, cfg, data_vec, kernel_vec, conv_out, last):
         # testing purpose.
         batch, ic_chunk, ih, ic_block, iw = s[data_vec].op.axis
         parallel_axis = s[data_vec].fuse(batch, ic_chunk, ih)
-        s[data_vec].parallel(parallel_axis)
+        # s[data_vec].parallel(parallel_axis)
 
         oc_chunk, ic_chunk, oh, ow, ic_block, oc_block = s[kernel_vec].op.axis
         s[kernel_vec].reorder(oc_chunk, oh, ic_chunk, ow, ic_block, oc_block)
         if oc_bn > 1:
             s[kernel_vec].vectorize(oc_block)
         parallel_axis = s[kernel_vec].fuse(oc_chunk, oh)
-        s[kernel_vec].parallel(parallel_axis)
+        # s[kernel_vec].parallel(parallel_axis)
 
     C, O = conv_out, last
     CC = s.cache_write(C, "global")
@@ -103,8 +103,8 @@ def _schedule_conv_NCHWc(s, cfg, data_vec, kernel_vec, conv_out, last):
 
     parallel_axis = s[C].fuse(batch, oc_chunk, oh_outer)
     s[CC].compute_at(s[C], parallel_axis)
-    if C == O:
-        s[C].parallel(parallel_axis)
+    # if C == O:
+    #     s[C].parallel(parallel_axis)
 
     _, oc_chunk, oh, ow, oc_block = s[CC].op.axis
     ic, _, _ = s[CC].op.reduce_axis
@@ -132,7 +132,7 @@ def _schedule_conv_NCHWc(s, cfg, data_vec, kernel_vec, conv_out, last):
             parallel_axis = s[O].fuse(batch, oc_chunk, oh_outer)
             s[C].compute_at(s[O], parallel_axis)
             s[O].vectorize(oc_block)
-            s[O].parallel(parallel_axis)
+            # s[O].parallel(parallel_axis)
         elif out_ndim == 4:
             batch, oc, oh, ow = s[O].op.axis
             oc_chunk, oc_block = s[O].split(oc, factor=oc_bn)
@@ -142,7 +142,7 @@ def _schedule_conv_NCHWc(s, cfg, data_vec, kernel_vec, conv_out, last):
             parallel_axis = s[O].fuse(batch, oc_chunk, oh_outer)
             s[C].compute_at(s[O], parallel_axis)
             s[O].vectorize(oc_block)
-            s[O].parallel(parallel_axis)
+            # s[O].parallel(parallel_axis)
         else:
             raise ValueError("Unsupported output ndim: %s" % out_ndim)
 
