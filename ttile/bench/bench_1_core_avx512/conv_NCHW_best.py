@@ -36,7 +36,7 @@ os.environ["TVM_NUM_THREADS"] = str(num_threads)
 data = relay.var("data", relay.TensorType((batch_size, in_channels, height + kernel_h - 1, width + kernel_w - 1), "float32"))
 weight = relay.var("weight", relay.TensorType((out_channels, in_channels, kernel_h, kernel_w), "float32"))
 net = relay.nn.conv2d(
-    data=data, weight=weight, kernel_size=(kernel_h, kernel_w), channels=in_channels, padding=(0, 0),
+    data=data, weight=weight, kernel_size=(kernel_h, kernel_w), channels=out_channels, padding=(0, 0),
 )
 
 data_shape = (batch_size, in_channels, height + kernel_h - 1, width + kernel_w - 1)
