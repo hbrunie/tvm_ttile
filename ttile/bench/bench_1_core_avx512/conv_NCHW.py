@@ -45,7 +45,7 @@ net, params = testing.create_workload(net)
 
 tuning_option = {
     "log_filename": log_file,
-    "tuner": "xgb",
+    "tuner": "ga",
     "early_stopping": None,
     "measure_option": autotvm.measure_option(
         builder=autotvm.LocalBuilder(),
@@ -92,7 +92,6 @@ def tune_and_evaluate(tuning_opt, mod, params, data_shape):
     tasks = autotvm.task.extract_from_program(
         mod["main"], target=target, params=params, ops=(relay.op.get("nn.conv2d"),)
     )
-
     # run tuning tasks
     tune_kernels(tasks, **tuning_opt)
 

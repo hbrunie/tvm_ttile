@@ -45,7 +45,7 @@ net, params = testing.create_workload(net)
 
 tuning_option = {
     "log_filename": log_file,
-    "tuner": "xgb",
+    "tuner": "ga",
     "early_stopping": None,
     "measure_option": autotvm.measure_option(
         builder=autotvm.LocalBuilder(),
