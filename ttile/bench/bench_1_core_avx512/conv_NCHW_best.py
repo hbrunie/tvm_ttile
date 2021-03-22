@@ -14,7 +14,7 @@ from tvm.autotvm.graph_tuner import DPTuner, PBQPTuner
 
 name_conv = sys.argv[1]
 
-out_channels, in_channels, height, width, kernel_h, kernel_w = input_conv.input_conv[name_conv]
+out_channels, in_channels, height, width, kernel_h, kernel_w, stride_h, stride_w = input_conv.input_conv[name_conv]
 
 batch_size = 1
 pad_h = 0
@@ -36,7 +36,7 @@ os.environ["TVM_NUM_THREADS"] = str(num_threads)
 data = relay.var("data", relay.TensorType((batch_size, in_channels, height + kernel_h - 1, width + kernel_w - 1), "float32"))
 weight = relay.var("weight", relay.TensorType((out_channels, in_channels, kernel_h, kernel_w), "float32"))
 net = relay.nn.conv2d(
-    data=data, weight=weight, kernel_size=(kernel_h, kernel_w), channels=out_channels, padding=(0, 0),
+    data=data, weight=weight, kernel_size=(kernel_h, kernel_w), channels=out_channels, strides = (stride_h, stride_w), padding=(0, 0),
 )
 
 data_shape = (batch_size, in_channels, height + kernel_h - 1, width + kernel_w - 1)
@@ -45,7 +45,7 @@ net, params = testing.create_workload(net)
 
 tuning_option = {
     "log_filename": log_file,
-    "tuner": "random",
+    "tuner": "xgb",
     "early_stopping": None,
     "measure_option": autotvm.measure_option(
         builder=autotvm.LocalBuilder(),
@@ -65,16 +65,16 @@ def evaluate(tuning_opt, mod, params, data_shape):
         with tvm.transform.PassContext(opt_level=3):
             lib = relay.build_module.build(mod, target=target, params=params)
 
-        # upload parameters to device
-        ctx = tvm.cpu()
-        data_tvm = tvm.nd.array((np.random.uniform(size=data_shape)).astype(dtype))
-        module = runtime.GraphModule(lib["default"](ctx))
-        module.set_input(input_name, data_tvm)
+    # upload parameters to device
+    ctx = tvm.cpu()
+    data_tvm = tvm.nd.array((np.random.uniform(size=data_shape)).astype(dtype))
+    module = runtime.GraphModule(lib["default"](ctx))
+    module.set_input(input_name, data_tvm)
 
-        # evaluate
-        ftimer = module.module.time_evaluator("run", ctx, number=3, repeat=10)
-        prof_res = np.array(ftimer().results) * 1000  # convert to millisecond
-        print(np.mean(prof_res), end='')
+    # evaluate
+    ftimer = module.module.time_evaluator("run", ctx, number=3, repeat=10)
+    prof_res = np.array(ftimer().results) * 1000  # convert to millisecond
+    print(np.mean(prof_res), end='')
 
 
 evaluate(tuning_option, net, params, data_shape)

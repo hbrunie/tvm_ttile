@@ -14,13 +14,11 @@ from tvm.autotvm.graph_tuner import DPTuner, PBQPTuner
 
 name_conv = sys.argv[1]
 
-out_channels, in_channels, height, width, kernel_h, kernel_w = input_conv.input_conv[name_conv]
+out_channels, in_channels, height, width, kernel_h, kernel_w, stride_h, stride_w = input_conv.input_conv[name_conv]
 
 batch_size = 1
 pad_h = 0
 pad_w = 0
-stride_h = 1
-stride_w = 1
 dilation_h = 0
 dilation_w = 0
 
@@ -36,7 +34,7 @@ os.environ["TVM_NUM_THREADS"] = str(num_threads)
 data = relay.var("data", relay.TensorType((batch_size, in_channels, height + kernel_h - 1, width + kernel_w - 1), "float32"))
 weight = relay.var("weight", relay.TensorType((out_channels, in_channels, kernel_h, kernel_w), "float32"))
 net = relay.nn.conv2d(
-    data=data, weight=weight, kernel_size=(kernel_h, kernel_w), channels=out_channels, padding=(0, 0), 
+    data=data, weight=weight, kernel_size=(kernel_h, kernel_w), channels=out_channels, strides=(stride_h, stride_w) padding=(0, 0),
 )
 
 data_shape = (batch_size, in_channels, height + kernel_h - 1, width + kernel_w - 1)
@@ -45,7 +43,7 @@ net, params = testing.create_workload(net)
 
 tuning_option = {
     "log_filename": log_file,
-    "tuner": "ga",
+    "tuner": "xgb",
     "early_stopping": None,
     "measure_option": autotvm.measure_option(
         builder=autotvm.LocalBuilder(),
@@ -124,8 +122,8 @@ for k in range(5):
     time.remove(min(time))
 
 result = np.mean(time)
+std = np.std(time)
 
 f = open("result/result.txt", "a")
-f.write(name_conv + " " + str(result) + "\n")
+f.write(name_conv + " " + str(result) + " " + str(std) + "\n")
 f.close()
-
