@@ -23,7 +23,7 @@ dilation_h = 0
 dilation_w = 0
 
 target = "llvm -mcpu=core-avx2"
-log_file = "log/%s.log" % name_conv
+log_file = "logga/%s.log" % name_conv
 graph_opt_sch_file = "%s_graph_opt.log" % name_conv
 dtype = "float32"
 input_name = "data"
@@ -43,7 +43,7 @@ net, params = testing.create_workload(net)
 
 tuning_option = {
     "log_filename": log_file,
-    "tuner": "xgb",
+    "tuner": "ga",
     "early_stopping": None,
     "measure_option": autotvm.measure_option(
         builder=autotvm.LocalBuilder(),
@@ -55,8 +55,44 @@ tuning_option = {
 
 # logging.basicConfig(level=logging.DEBUG)  # to dump TVM IR after fusion
 
+def tune_kernels(tasks, measure_option, tuner="gridsearch", early_stopping=None, log_filename="log/autotvm" + name_conv + ".log"):
 
-def evaluate(tuning_opt, mod, params, data_shape):
+    for i, task in enumerate(tasks):
+        prefix = "[Task " + name_conv +"]"
+
+        # create tuner
+        if tuner == "xgb" or tuner == "xgb-rank":
+            tuner_obj = XGBTuner(task, loss_type="rank")
+        elif tuner == "ga":
+            tuner_obj = GATuner(task, pop_size=50)
+        elif tuner == "random":
+            tuner_obj = RandomTuner(task)
+        elif tuner == "gridsearch":
+            tuner_obj = GridSearchTuner(task)
+        else:
+            raise ValueError("Invalid tuner: " + tuner)
+
+        # do tuning
+        n_trial = len(task.config_space)
+        # n_trial = 4
+        tuner_obj.tune(
+            n_trial=n_trial,
+            early_stopping=early_stopping,
+            measure_option=measure_option,
+            callbacks=[
+                autotvm.callback.progress_bar(n_trial, prefix=prefix),
+                autotvm.callback.log_to_file(log_filename),
+            ],
+        )
+
+def tune_and_evaluate(tuning_opt, mod, params, data_shape):
+    # extract workloads from relay program
+    tasks = autotvm.task.extract_from_program(
+        mod["main"], target=target, params=params, ops=(relay.op.get("nn.conv2d"),)
+    )
+
+    # run tuning tasks
+    tune_kernels(tasks, **tuning_opt)
 
     with autotvm.apply_history_best(log_file):
         with tvm.transform.PassContext(opt_level=3):
@@ -70,7 +106,23 @@ def evaluate(tuning_opt, mod, params, data_shape):
             # evaluate
             ftimer = module.module.time_evaluator("run", ctx, number=3, repeat=10)
             prof_res = np.array(ftimer().results) * 1000  # convert to millisecond
-            print(np.mean(prof_res), end='')
+
+    return np.mean(prof_res)
 
 
-evaluate(tuning_option, net, params, data_shape)
+time = [tune_and_evaluate(tuning_option, net, params, data_shape)]
+
+for k in range(19):
+    time += [float(os.popen("python3 conv_NCHW_best_ga.py " + name_conv).read())]
+
+
+for k in range(5):
+    time.remove(max(time))
+    time.remove(min(time))
+
+result = np.mean(time)
+std = np.std(time)
+
+f = open("resultga/result.txt", "a")
+f.write(name_conv + " " + str(result) + " " + str(std) + "\n")
+f.close()

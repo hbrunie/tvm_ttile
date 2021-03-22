@@ -23,7 +23,7 @@ dilation_h = 0
 dilation_w = 0
 
 target = "llvm -mcpu=core-avx2"
-log_file = "log/%s.log" % name_conv
+log_file = "logga/%s.log" % name_conv
 graph_opt_sch_file = "%s_graph_opt.log" % name_conv
 dtype = "float32"
 input_name = "data"
@@ -54,6 +54,7 @@ tuning_option = {
 }
 
 # logging.basicConfig(level=logging.DEBUG)  # to dump TVM IR after fusion
+
 
 
 def evaluate(tuning_opt, mod, params, data_shape):

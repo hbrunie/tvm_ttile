@@ -27,14 +27,14 @@ log_file = "log/%s.log" % name_conv
 graph_opt_sch_file = "%s_graph_opt.log" % name_conv
 dtype = "float32"
 input_name = "data"
-
+ctx = tvm.context(target)
 num_threads = 1
 os.environ["TVM_NUM_THREADS"] = str(num_threads)
 
 data = relay.var("data", relay.TensorType((batch_size, in_channels, height + kernel_h - 1, width + kernel_w - 1), "float32"))
 weight = relay.var("weight", relay.TensorType((out_channels, in_channels, kernel_h, kernel_w), "float32"))
 net = relay.nn.conv2d(
-    data=data, weight=weight, kernel_size=(kernel_h, kernel_w), channels=out_channels, strides=(stride_h, stride_w) padding=(0, 0),
+    data=data, weight=weight, kernel_size=(kernel_h, kernel_w), channels=out_channels, strides=(stride_h, stride_w), padding=(0, 0),
 )
 
 data_shape = (batch_size, in_channels, height + kernel_h - 1, width + kernel_w - 1)
@@ -98,24 +98,21 @@ def tune_and_evaluate(tuning_opt, mod, params, data_shape):
         with tvm.transform.PassContext(opt_level=3):
             lib = relay.build_module.build(mod, target=target, params=params)
 
-        # upload parameters to device
-        ctx = tvm.cpu()
-        data_tvm = tvm.nd.array((np.random.uniform(size=data_shape)).astype(dtype))
-        module = runtime.GraphModule(lib["default"](ctx))
-        module.set_input(input_name, data_tvm)
+            # upload parameters to device
+            data_tvm = tvm.nd.array((np.random.uniform(size=data_shape)).astype(dtype))
+            module = runtime.GraphModule(lib["default"](ctx))
+            module.set_input(input_name, data_tvm)
 
-        # evaluate
-        ftimer = module.module.time_evaluator("run", ctx, number=3, repeat=10)
-        prof_res = np.array(ftimer().results) * 1000  # convert to millisecond
+            # evaluate
+            ftimer = module.module.time_evaluator("run", ctx, number=3, repeat=10)
+            prof_res = np.array(ftimer().results) * 1000  # convert to millisecond
 
     return np.mean(prof_res)
-
 
 time = [tune_and_evaluate(tuning_option, net, params, data_shape)]
 
 for k in range(19):
     time += [float(os.popen("python3 conv_NCHW_best.py " + name_conv).read())]
-
 
 for k in range(5):
     time.remove(max(time))
