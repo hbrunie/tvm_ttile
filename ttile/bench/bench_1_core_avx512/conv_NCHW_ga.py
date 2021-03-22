@@ -23,7 +23,7 @@ dilation_h = 0
 dilation_w = 0
 
 target = "llvm -mcpu=skylake-avx512"
-log_file = "log/%s.log" % name_conv
+log_file = "logga/%s.log" % name_conv
 graph_opt_sch_file = "%s_graph_opt.log" % name_conv
 dtype = "float32"
 input_name = "data"
@@ -43,7 +43,7 @@ net, params = testing.create_workload(net)
 
 tuning_option = {
     "log_filename": log_file,
-    "tuner": "xgb",
+    "tuner": "ga",
     "early_stopping": None,
     "measure_option": autotvm.measure_option(
         builder=autotvm.LocalBuilder(),
@@ -97,14 +97,14 @@ def tune_and_evaluate(tuning_opt, mod, params, data_shape):
         with tvm.transform.PassContext(opt_level=3):
             lib = relay.build_module.build(mod, target=target, params=params)
 
-        # upload parameters to device
-        data_tvm = tvm.nd.array((np.random.uniform(size=data_shape)).astype(dtype))
-        module = runtime.GraphModule(lib["default"](ctx))
-        module.set_input(input_name, data_tvm)
+            # upload parameters to device
+            data_tvm = tvm.nd.array((np.random.uniform(size=data_shape)).astype(dtype))
+            module = runtime.GraphModule(lib["default"](ctx))
+            module.set_input(input_name, data_tvm)
 
-        # evaluate
-        ftimer = module.module.time_evaluator("run", ctx, number=3, repeat=10)
-        prof_res = np.array(ftimer().results) * 1000  # convert to millisecond
+            # evaluate
+            ftimer = module.module.time_evaluator("run", ctx, number=3, repeat=10)
+            prof_res = np.array(ftimer().results) * 1000  # convert to millisecond
 
     return np.mean(prof_res)
 
@@ -112,7 +112,7 @@ def tune_and_evaluate(tuning_opt, mod, params, data_shape):
 time = [tune_and_evaluate(tuning_option, net, params, data_shape)]
 
 for k in range(19):
-    time += [float(os.popen("python3 conv_NCHW_best.py " + name_conv).read())]
+    time += [float(os.popen("python3 conv_NCHW_best_ga.py " + name_conv).read())]
 
 
 for k in range(5):
@@ -122,6 +122,6 @@ for k in range(5):
 result = np.mean(time)
 std = np.std(time)
 
-f = open("result/result.txt", "a")
+f = open("resultga/result.txt", "a")
 f.write(name_conv + " " + str(result) + " " + str(std) + "\n")
 f.close()
