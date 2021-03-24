@@ -22,11 +22,16 @@ convert_name = {
     "h": "kernel_h"
 }
 
-def find_axe_to_vectorize(order):
+def find_axe_to_vectorize(order, sol):
+    """
     for k in range(len(order)):
         if "kernel" not in order[-1 - k] and "in_channels" not in order[-1 - k]:
             return order[-1-k]
-
+    """
+    if sol["f"][0] != 0:
+        return("axe_out_channels_0")
+    else:
+        return("axe_out_channels")
 
 def generate_template(name_input, target, archi):
 
@@ -137,7 +142,7 @@ def conv2d_ttile_{name_input_}(batch_size, height, width, in_channels, out_chann
 
     f.write(f"""
     #s[Out].vectorize({lorder[-1]})
-    s[Out].vectorize({find_axe_to_vectorize(lorder)})
+    s[Out].vectorize({find_axe_to_vectorize(lorder, sol)})
      """)    
 
     f.write(f"""
@@ -344,7 +349,7 @@ def conv2d_ttile_{name_input_}(batch_size, height, width, in_channels, out_chann
 
     f.write(f"""
     #s[Out].vectorize({lorder[-1]})
-    s[Out].vectorize({find_axe_to_vectorize(lorder)})
+    s[Out].vectorize({find_axe_to_vectorize(lorder, sol)})
      """)    
 
     f.write(f"""
