@@ -1,4 +1,4 @@
-#K*C*H*W*R*S
+#K*C*H*W*R*S*Stride*Stride
 
 input_conv = {
     "MobilNet_1":  [32,    32,   112, 112, 3, 3, 1, 1],
