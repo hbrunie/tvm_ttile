@@ -160,7 +160,7 @@ def evaluate():
 
     tuner = autotvm.tuner.XGBTuner(task)
     tuner.tune(
-        n_trial=5,
+        n_trial=1000,
         measure_option=measure_option,
         callbacks=[autotvm.callback.log_to_file(log_file)],
     )
