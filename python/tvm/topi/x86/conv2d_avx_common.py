@@ -91,6 +91,7 @@ def _schedule_conv_NCHWc(s, cfg, data_vec, kernel_vec, conv_out, last):
 
     # schedule pad
     if isinstance(s[data_vec].op, tvm.te.ComputeOp) and "pad" in data_vec.op.tag:
+        print("11")
         batch, ic_chunk, ih, iw, ic_block = s[data_vec].op.axis
         s[data_vec].vectorize(ic_block)
         parallel_axis = s[data_vec].fuse(batch, ic_chunk, ih)
@@ -99,6 +100,7 @@ def _schedule_conv_NCHWc(s, cfg, data_vec, kernel_vec, conv_out, last):
 
     oc_bn = cfg["tile_oc"].size[-1]
     if isinstance(kernel_vec.op, tvm.te.ComputeOp) and kernel_vec.name == "kernel_vec":
+        print("22")
         # data and kernel are not pre-computed, schedule layout transform here.
         # this should only be used by x86 conv2d_nchw, which is for
         # testing purpose.
@@ -144,6 +146,7 @@ def _schedule_conv_NCHWc(s, cfg, data_vec, kernel_vec, conv_out, last):
     if C != O:
         out_ndim = len(s[O].op.axis)
         if out_ndim == 5:
+            print("33")
             batch, oc_chunk, oh, ow, oc_block = s[O].op.axis
             ow_chunk, ow_block = s[O].split(ow, factor=reg_n)
             s[O].reorder(oc_chunk, oh, ow_chunk, ow_block, oc_block)
@@ -152,6 +155,7 @@ def _schedule_conv_NCHWc(s, cfg, data_vec, kernel_vec, conv_out, last):
             s[O].vectorize(oc_block)
             # s[O].parallel(parallel_axis)
         elif out_ndim == 4:
+            print("44")
             batch, oc, oh, ow = s[O].op.axis
             ow_chunk, ow_block = s[O].split(ow, factor=reg_n)
             oc_chunk, oc_block = s[O].split(oc, factor=oc_bn)
@@ -163,7 +167,8 @@ def _schedule_conv_NCHWc(s, cfg, data_vec, kernel_vec, conv_out, last):
         else:
             raise ValueError("Unsupported output ndim: %s" % out_ndim)
 
-    # print(tvm.lower(s, [data_vec, kernel_vec, conv_out]))
+    
+    print(tvm.lower(s, [data_vec, kernel_vec, conv_out]))
 
     return s
 
