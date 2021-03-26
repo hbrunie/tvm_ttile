@@ -33,39 +33,7 @@ def find_axe_to_vectorize(order, sol):
     else:
         return("axe_out_channels")
 
-def find_size_tile(axis, tile_ioopt, mode):
-    dup = 0
-    ddown = 0
-    dclosest = 0
-    if mode == "up" or mode == "closest":
-        for k in range(tile_ioopt, axis + 1):
-            if axis % k == 0:
-                dup = k
-                break
-    if mode == "down" or mode == "closest":
-        for k in range(tile_ioopt, 0, -1):
-            if axis & k == 0:
-                ddown = k
-                break
-    if mode == "closest":
-        if dup - tile_ioopt <= tile_ioopt - ddown:
-            dclosest = dup
-        else:
-            dclosest = ddown
-    if mode == "up":
-        return dup
-    elif mode == "down":
-        return ddown
-    elif mode == "closest":
-        return dclosest
-    else:
-        print("Problem with mode")
-        return axis
-    
-
-
-
-def generate_template(name_input, target, archi, mode):
+def generate_template(name_input, target, archi):
 
     f = open("template/template_" + name_input.replace("-", "_") + ".py", "w")
 
@@ -73,24 +41,6 @@ def generate_template(name_input, target, archi, mode):
 
     batch_size = 1
     out_channels, in_channels, height, width, kernel_h, kernel_w, stride_h, stride_w = input_conv.input_conv[name_input]
-
-    out_h = height  // stride_h 
-    out_w = width // stride_w 
-
-    value_input = {
-        "out_channels": out_channels, 
-        "in_channels": in_channels, 
-        "height": height, 
-        "width": width, 
-        "kernel_h": kernel_h, 
-        "kernel_w": kernel_w, 
-        "stride_h": stride_h, 
-        "stride_w": stride_w,
-        "out_h": out_h,
-        "out_w": out_w
-    }
-
-    
 
     sol = solution.solution(name_input, archi)
     #headers
@@ -154,25 +104,24 @@ def conv2d_ttile_{name_input_}(batch_size, height, width, in_channels, out_chann
     cfg = autotvm.get_config()
     """)
 
+    # TODO pb with some tile when k > 1
+    for key in sol:
+        for k in range(sol[key][0]):
+            f.write(f"""
+    cfg.define_knob("tile_{convert_name[key]}_{k}", [k for k in range(1, {convert_name[key]} + 1) if {convert_name[key]}%k == 0])
+            """)
 
 
     for key in sol:
         if sol[key][0] != 0: 
             name_axe_init = convert_axe[key]
             name_axe_intermediate = convert_axe[key]
-            value_axis = value_input[convert_name[key]]
             for id_split in range(sol[key][0]):
                 #check les indentations
-                if int(sol[key][-1 - id_split]) > value_axis:
-                    tile_size_ioopt = value_axis
-                else:
-                    tile_size_ioopt = int(sol[key][-1 - id_split])
-                tile_size = find_size_tile(value_axis, tile_size_ioopt, mode)
                 f.write(f"""
-    {name_axe_init}_{id_split+1}, {name_axe_init}_{id_split} = s[Out].split({name_axe_intermediate}, {tile_size})
+    {name_axe_init}_{id_split+1}, {name_axe_init}_{id_split} = s[Out].split({name_axe_intermediate}, cfg["tile_{convert_name[key]}_{id_split}"].val)
                 """)
                 name_axe_intermediate = name_axe_init + "_" + str(id_split+1)
-                value_axis = tile_size_ioopt
 
     lorder = reorder.reorder(name_input, archi)
     order = ",".join(lorder)
@@ -180,12 +129,12 @@ def conv2d_ttile_{name_input_}(batch_size, height, width, in_channels, out_chann
     s[Out].reorder({order})
     """)
 
-    for k in range(3):
+    for k in range(2):
         f.write(f"""
     cfg.define_knob("unroll_{lorder[-1-k]}", [True, False])
         """)
 
-    for k in range(3):
+    for k in range(2):
         f.write(f"""
     if cfg["unroll_{lorder[-1-k]}"].val:
         s[Out].unroll({lorder[-1-k]})
@@ -255,39 +204,35 @@ def evaluate():
 
     # Test Result
 
-    # from tvm.topi.nn import conv2d_nhwc
+    from tvm.topi.nn import conv2d_nhwc
 
-    # A = te.placeholder((batch_size, width + kernel_w - 1, height + kernel_h - 1, in_channels), name="A")
-    # W = te.placeholder((kernel_w, kernel_h, in_channels, out_channels), name="W")
+    A = te.placeholder((batch_size, width + kernel_w - 1, height + kernel_h - 1, in_channels), name="A")
+    W = te.placeholder((kernel_w, kernel_h, in_channels, out_channels), name="W")
 
-    # Out_test = conv2d_nhwc(A, W, stride_h, 0, 1, "float32")
+    Out_test = conv2d_nhwc(A, W, stride_h, 0, 1, "float32")
 
-    # s = te.create_schedule(Out_test.op)
+    s = te.create_schedule(Out_test.op)
 
-    # f_test = tvm.build(s, [A, W, Out_test], target)
-    # f_test(a, w, oo)
+    f_test = tvm.build(s, [A, W, Out_test], target)
+    f_test(a, w, oo)
 
-    # output_conv2d_test = oo.asnumpy()
+    output_conv2d_test = oo.asnumpy()
 
-    # tvm.testing.assert_allclose(output_conv2d, output_conv2d_test, rtol=1e-5)
+    tvm.testing.assert_allclose(output_conv2d, output_conv2d_test, rtol=1e-5)
 
 
-    # for k in range(19):
-    #     time += [float(os.popen("python3 template/apply_best_{name_input.replace("-", "_")}.py").read())]
+    for k in range(19):
+        time += [float(os.popen("python3 template/apply_best_{name_input.replace("-", "_")}.py").read())]
 
-    # for k in range(5):
-    #     time.remove(max(time))
-    #     time.remove(min(time))
+    for k in range(5):
+        time.remove(max(time))
+        time.remove(min(time))
 
-    # result = np.mean(time)
-    # std = np.std(time)
-
-    # f = open("result.txt", "a")
-    # f.write("{name_input.replace("-", "_")} " + str(result) + " " + str(std) + "\\n")
-    # f.close()
+    result = np.mean(time)
+    std = np.std(time)
 
     f = open("result.txt", "a")
-    f.write("{name_input.replace("-", "_")} " + str(result) + "\\n")
+    f.write("{name_input.replace("-", "_")} " + str(result) + " " + str(std) + "\\n")
     f.close()
 
 
@@ -296,7 +241,7 @@ def evaluate():
 
 
 
-def generate_apply_best(name_input, target, archi, mode):
+def generate_apply_best(name_input, target, archi):
 
     f = open("template/apply_best_" + name_input.replace("-", "_") + ".py", "w")
 
@@ -304,22 +249,6 @@ def generate_apply_best(name_input, target, archi, mode):
 
     batch_size = 1
     out_channels, in_channels, height, width, kernel_h, kernel_w, stride_h, stride_w = input_conv.input_conv[name_input]
-
-    out_h = height  // stride_h 
-    out_w = width // stride_w 
-
-    value_input = {
-        "out_channels": out_channels, 
-        "in_channels": in_channels, 
-        "height": height, 
-        "width": width, 
-        "kernel_h": kernel_h, 
-        "kernel_w": kernel_w, 
-        "stride_h": stride_h, 
-        "stride_w": stride_w,
-        "out_h": out_h,
-        "out_w": out_w
-    }
 
     sol = solution.solution(name_input, archi)
     #headers
@@ -383,19 +312,24 @@ def conv2d_ttile_{name_input_}(batch_size, height, width, in_channels, out_chann
     cfg = autotvm.get_config()
     """)
 
+    # TODO pb with some tile when k > 1
+    for key in sol:
+        for k in range(sol[key][0]):
+            f.write(f"""
+    cfg.define_knob("tile_{convert_name[key]}_{k}", [k for k in range(1, {convert_name[key]} + 1) if {convert_name[key]}%k == 0])
+            """)
+
+
     for key in sol:
         if sol[key][0] != 0: 
             name_axe_init = convert_axe[key]
             name_axe_intermediate = convert_axe[key]
-            value_axis = value_input[convert_name[key]]
             for id_split in range(sol[key][0]):
                 #check les indentations
-                tile_size = find_size_tile(value_axis, int(sol[key][-1 - id_split]), mode)
                 f.write(f"""
-    {name_axe_init}_{id_split+1}, {name_axe_init}_{id_split} = s[Out].split({name_axe_intermediate}, {tile_size})
+    {name_axe_init}_{id_split+1}, {name_axe_init}_{id_split} = s[Out].split({name_axe_intermediate}, cfg["tile_{convert_name[key]}_{id_split}"].val)
                 """)
                 name_axe_intermediate = name_axe_init + "_" + str(id_split+1)
-                value_axis = int(sol[key][-1 - id_split])
 
     lorder = reorder.reorder(name_input, archi)
     order = ",".join(lorder)
@@ -403,12 +337,12 @@ def conv2d_ttile_{name_input_}(batch_size, height, width, in_channels, out_chann
     s[Out].reorder({order})
     """)
 
-    for k in range(3):
+    for k in range(2):
         f.write(f"""
     cfg.define_knob("unroll_{lorder[-1-k]}", [True, False])
         """)
 
-    for k in range(3):
+    for k in range(2):
         f.write(f"""
     if cfg["unroll_{lorder[-1-k]}"].val:
         s[Out].unroll({lorder[-1-k]})
@@ -417,7 +351,7 @@ def conv2d_ttile_{name_input_}(batch_size, height, width, in_channels, out_chann
     f.write(f"""
     #s[Out].vectorize({lorder[-1]})
     s[Out].vectorize({find_axe_to_vectorize(lorder, sol)})
-     """) 
+     """)    
 
     f.write(f"""
     #print(tvm.lower(s, [A, W, Out]))
