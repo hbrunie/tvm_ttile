@@ -249,7 +249,8 @@ def parser(name):
             "factor_yy": factor("y", structure),
             "factor_in_channels": factor("c", structure),
             "order": order(structure),
-            "nb_loop_no_tensorize": level1
+            "nb_loop_no_tensorize": level1,
+            "axe_to_tensorize": order(structure)[level1 - 1]
         }
     else:
         info_tensorize[1] = {
@@ -259,7 +260,8 @@ def parser(name):
             "factor_yy": factor("y", structure1),
             "factor_in_channels": factor("c", structure1),
             "order": order(structure1, "1"),
-            "nb_loop_no_tensorize": level1
+            "nb_loop_no_tensorize": level1,
+            "axe_to_tensorize": order(structure1, "1")[level1 - 1]
         }
         info_tensorize[2] = {
             "height": factor("height", structure2),
@@ -268,7 +270,8 @@ def parser(name):
             "factor_yy": factor("y", structure2),
             "factor_in_channels": factor("c", structure2),
             "order": order(structure2, "2"),
-            "nb_loop_no_tensorize": level2
+            "nb_loop_no_tensorize": level2,
+            "axe_to_tensorize": order(structure2, "2")[level2 - 1]
         }
 
 
