@@ -70,8 +70,9 @@ def write_c_file(name, header, old_file, info):
         f.write(old_file[k])
 
     f.write("}\n"); # for the main
-
     f.close()
+
+    return level_
 
 def replace(f, x, y):
     """
@@ -83,12 +84,59 @@ def replace(f, x, y):
     return f
 
 def factor(variable, structure):
+    """
+    Return the factor of each tile
+    """
     if variable == "height":
         return structure[1][4][1]
     for k in range(1, len(structure)):
         l = structure[k][4]
         if variable in l[0][0]:
             return l[2]
+    return 1
+
+def order(structure, suffix=""): #todo faut verifier qu'il y a pas plus de split que 1
+    """
+    Return the loop order of the convolution
+    """
+    outter = 'o'
+    inner = 'i'
+    order = []
+    convert = {
+        "f": "axe_out_channels" + suffix,
+        "c": "axe_in_channels" + suffix,
+        "x": "axe_xx" + suffix,
+        "y": "axe_yy" + suffix,
+        "w": "axe_kernel_w" + suffix,
+        "h": "axe_kernel_h" + suffix
+    }
+    number = {
+        "f": 0,
+        "c": 0,
+        "x": 0,
+        "y": 0,
+        "w": 0,
+        "h": 0
+    }
+    for k in range(1, len(structure)):
+        l = structure[k][4]
+        if "x" in l[0][0]:
+            variable = "x"
+        elif "y" in l[0][0]:
+            variable = "y"
+        elif "h" in l[0][0]:
+            variable = "h"
+        elif "w" in l[0][0]:
+            variable = "w"
+        elif "f" in l[0][0]:
+            variable = "f"
+        elif "c" in l[0][0]:
+            variable = "c"
+        suffix_loop = outter if number[variable] == 0 else inner
+        order += [convert[variable] + suffix_loop]
+        number[variable] += 1
+
+    return order
 
 
 def parser(name):
@@ -182,13 +230,13 @@ def parser(name):
             if structure[k][3] == 1:
                 number_of_level += [k]
     if len(number_of_level) == 1:
-        write_c_file("tensorize_files/" + name + ".c", structure[1][1], f, structure)
+        level1 = write_c_file("tensorize_files/" + name + ".c", structure[1][1], f, structure)
     else:
         structure1 = structure[:number_of_level[1]]
         structure2 = [structure[0]] + structure[number_of_level[1]:]
 
-        write_c_file("tensorize_files/" + name + "1.c", structure[1][1], f, structure1)
-        write_c_file("tensorize_files/" + name + "2.c", structure[1][1], f, structure2)
+        level1 = write_c_file("tensorize_files/" + name + "1.c", structure[1][1], f, structure1)
+        level2 = write_c_file("tensorize_files/" + name + "2.c", structure[1][1], f, structure2)
 
     # information for tensorize i.e. factor of tilling
     info_tensorize = {}
@@ -199,7 +247,9 @@ def parser(name):
             "factor_out_channels": factor("f", structure),
             "factor_xx": factor("x", structure),
             "factor_yy": factor("y", structure),
-            "factor_in_channels": factor("c", structure)
+            "factor_in_channels": factor("c", structure),
+            "order": order(structure),
+            "nb_loop_no_tensorize": level1
         }
     else:
         info_tensorize[1] = {
@@ -208,15 +258,23 @@ def parser(name):
             "factor_xx": factor("x", structure1),
             "factor_yy": factor("y", structure1),
             "factor_in_channels": factor("c", structure1),
+            "order": order(structure1, "1"),
+            "nb_loop_no_tensorize": level1
         }
         info_tensorize[2] = {
             "height": factor("height", structure2),
             "factor_out_channels": factor("f", structure2),
             "factor_xx": factor("x", structure2),
             "factor_yy": factor("y", structure2),
-            "factor_in_channels": factor("c", structure2)
+            "factor_in_channels": factor("c", structure2),
+            "order": order(structure2, "2"),
+            "nb_loop_no_tensorize": level2
         }
 
 
 
     return info_tensorize
+
+print(parser("test"))
+print()
+print(parser("test2"))
