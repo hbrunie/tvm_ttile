@@ -236,7 +236,7 @@ def conv2d_ttile_1kernel(name, batch_size, width, height, kernel_w, kernel_h, in
     s[Out].tensorize(dic_order[info_tile[1]["axe_to_tensorize"]], conv)
     s[Out].pragma(axe_batch, "import_llvm", conv_impl(name, len(info_tile)))
 
-    print(tvm.lower(s, [A, W, Out], simple_mode=True))
+    # print(tvm.lower(s, [A, W, Out], simple_mode=True))
 
     return s, [A, W, Out]
 
@@ -398,7 +398,7 @@ def conv2d_ttile_2kernel(name, batch_size, width, height, kernel_w, kernel_h, in
 
     s[Out2].tensorize(dic_order[info_tile[2]["axe_to_tensorize"]], conv2)
 
-    print(tvm.lower(s, [A, W, Out], simple_mode=True))
+    # print(tvm.lower(s, [A, W, Out], simple_mode=True))
 
     return s, [A, W, Out]
 
@@ -450,7 +450,7 @@ if __name__ == '__main__':
     tensorize_result = o.asnumpy()
 
     # evaluate
-    evaluator = func.time_evaluator(func.entry_name, ctx, number=10)
+    evaluator = func.time_evaluator(func.entry_name, ctx, number=3, repeat=10)
     print("My Convolution with tensorize: %f ms" % (evaluator(a, w, o).mean * 1e3))
 
     #check result
@@ -466,7 +466,10 @@ if __name__ == '__main__':
 
     f_test = tvm.build(s, [A, W, Out_test], target)
     f_test(a, w, oo)
+    # evaluator = f_test.time_evaluator(f_test.entry_name, ctx, number=3, repeat=10)
+    # print("TVM: %f ms" % (evaluator(a, w, o).mean * 1e3))
 
     output_conv2d_test = oo.asnumpy()
+
 
     tvm.testing.assert_allclose(tensorize_result, output_conv2d_test, rtol=1e-5)
