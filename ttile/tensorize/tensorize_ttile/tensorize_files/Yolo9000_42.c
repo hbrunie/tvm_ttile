@@ -1,6 +1,6 @@
 #include <x86intrin.h>
 
-void gen_conv(float * const  __restrict__ output,
+void gen_conv2(float * const  __restrict__ output,
 float const * const __restrict__ input, float const * const __restrict__ params,
     int X, int W,
     int Y, int H,
@@ -558,4 +558,5 @@ fp_0 = 0;
 								}
 							}
 						}
+					}
 }
