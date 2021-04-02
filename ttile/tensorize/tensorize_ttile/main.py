@@ -4,37 +4,31 @@ import tvm.testing
 import numpy as np
 from tvm.topi.utils import get_const_tuple
 import string
+import input_conv
 import parser
+import sys
 
 
 
-
-@tvm.te.hybrid.script
-def assign_output(c1, c2, height, width):
-    c = output_tensor((c1.shape[0], height, width, c1.shape[3]), 'float32')
-    for x in range(c1.shape[0]):
-        for y in range(c1.shape[1]):
-            for z in range(c1.shape[2]):
-                for t in range(c1.shape[3]):
-                    c[x,y,z,t] = c1[x,y,z,t]
-            for z in range(c2.shape[2]):
-                for t in range(c2.shape[3]):
-                    c[x,y,z + c1.shape[2],t] = c2[x,y,z,t]
-    return c
-# TODO
-
-# tester si avec deux A c'est mieux ou pas
-
-
-def generate_ttile_conv2d(name_file):
+def generate_ttile_conv2d(name_file, number_of_file):
 
     cc_code_begin = """
 extern "C" {
     """
 
-    file_ = open("tensorize_files/" + name_file + ".c", "r")
-    cc_code_midle = file_.read()
-    file_.close()
+    if number_of_file == 1:
+        file_ = open("tensorize_files/" + name_file + ".c", "r")
+        cc_code_midle = file_.read()
+        file_.close()
+    else:
+        file_ = open("tensorize_files/" + name_file + "1.c", "r")
+        cc_code_midle1 = file_.read()
+        file_.close()
+        file_ = open("tensorize_files/" + name_file + "2.c", "r")
+        cc_code_midle2 = file_.read()
+        file_.close()
+        cc_code_midle = cc_code_midle1 + cc_code_midle2
+
 
     cc_code_end = """
     void ttile_conv2d_reset(float * Output, int F, int X, int Y, int strideO1, int strideO2) {
@@ -59,14 +53,13 @@ extern "C" {
     }
 }
     """
-
     cc_code = cc_code_begin + cc_code_midle + cc_code_end
     return cc_code
 
 
-def conv_impl(name):
+def conv_impl(name_file, number_of_file):
 
-    cc_code = generate_ttile_conv2d(name)
+    cc_code = generate_ttile_conv2d(name_file, number_of_file)
     from tvm.contrib import utils, clang
 
     temp = utils.tempdir()
@@ -175,7 +168,7 @@ def intrin_conv(name_function, W, H, C, F, X, Y):
 
 
 
-def conv2d_ttile_1kernel(batch_size, width, height, kernel_w, kernel_h, in_channels, out_channels, info_tile):
+def conv2d_ttile_1kernel(name, batch_size, width, height, kernel_w, kernel_h, in_channels, out_channels, info_tile):
     A = te.placeholder((batch_size, width + kernel_w - 1, height + kernel_h - 1, in_channels), name="A")
     W = te.placeholder((kernel_w, kernel_h, in_channels, out_channels), name="W")
 
@@ -214,12 +207,13 @@ def conv2d_ttile_1kernel(batch_size, width, height, kernel_w, kernel_h, in_chann
         "axe_xxi": axe_xxi,
         "axe_in_channelso":axe_in_channelso,
         "axe_in_channelsi": axe_in_channelsi,
-        "axe_out_channelso":axe_yyo,
+        "axe_out_channelso":axe_out_channelso,
         "axe_out_channelsi": axe_out_channelsi,
+        "axe_kernel_ho": axe_kernel_h,
+        "axe_kernel_wo": axe_kernel_w,
     }
 
     order_string = info_tile[1]["order"]
-
     order = [axe_batch]
     for k in order_string:
         order += [dic_order[k]]
@@ -227,23 +221,20 @@ def conv2d_ttile_1kernel(batch_size, width, height, kernel_w, kernel_h, in_chann
 
     s[Out].reorder(*order)
 
+    fuse_loop = []
+
     if info_tile[1]["nb_loop_no_tensorize"] == 0:
         return s, [A, W, Out]
-    elif info_tile[1]["nb_loop_no_tensorize"] == 1: # check mais normalement le 0 c'est axe batch
-        fuse_loop = s[Out].fuse(s[Out].axis[0], s[Out].axis[1])
-    elif info_tile[1]["nb_loop_no_tensorize"] == 1: # check mais normalement le 0 c'est axe batch
-        fuse_loop = s[Out].fuse(s[Out].axis[0], s[Out].axis[1], s[Out].axis[2])
-    elif info_tile[1]["nb_loop_no_tensorize"] == 1: # check mais normalement le 0 c'est axe batch
-        fuse_loop = s[Out].fuse(s[Out].axis[0], s[Out].axis[1], s[Out].axis[2], s[Out].axis[3])
-    elif info_tile[1]["nb_loop_no_tensorize"] == 1: # check mais normalement le 0 c'est axe batch
-        fuse_loop = s[Out].fuse(s[Out].axis[0], s[Out].axis[1], s[Out].axis[2], s[Out].axis[3], s[Out].axis[4])
+    else: 
+        fuse_loop += [order[k] for k in range(1, info_tile[1]["nb_loop_no_tensorize"])]
 
+    fuse_loop = s[Out].fuse(*fuse_loop)
     s[Out].parallel(fuse_loop)
 
-    conv = intrin_gemv1(kernel_h, kernel_w, factor_in_channels, factor_out_channels, factor_xx, factor_yy)
-
-    s[Out].tensorize(dic_order[1]["axe_to_tensorize"], conv)
-    s[Out].pragma(axe_batch, "import_llvm", conv_impl(name))
+    conv = intrin_conv("gen_conv", kernel_h, kernel_w, factor_in_channels, factor_out_channels, factor_xx, factor_yy)
+    
+    s[Out].tensorize(dic_order[info_tile[1]["axe_to_tensorize"]], conv)
+    s[Out].pragma(axe_batch, "import_llvm", conv_impl(name, len(info_tile)))
 
     print(tvm.lower(s, [A, W, Out], simple_mode=True))
 
@@ -251,7 +242,7 @@ def conv2d_ttile_1kernel(batch_size, width, height, kernel_w, kernel_h, in_chann
 
 
 
-def conv2d_ttile_2kernel(name, batch_size, width, height, kernel_w, kernel_h, in_channels, out_channels):
+def conv2d_ttile_2kernel(name, batch_size, width, height, kernel_w, kernel_h, in_channels, out_channels, info_tile):
 
     A = te.placeholder((batch_size, width + kernel_w - 1, height + kernel_h - 1, in_channels), name="A")
     W = te.placeholder((kernel_w, kernel_h, in_channels, out_channels), name="W")
@@ -282,7 +273,24 @@ def conv2d_ttile_2kernel(name, batch_size, width, height, kernel_w, kernel_h, in
             A[batch, xx + axe_kernel_w2, yy + 24 + axe_kernel_h2, axe_in_channels2]* W[axe_kernel_w2, axe_kernel_h2, axe_in_channels2, out_channels],
             axis=[axe_in_channels2, axe_kernel_h2, axe_kernel_w2],)
         )
-    Out = assign_output(Out1, Out2, height, width)
+
+    @tvm.te.hybrid.script
+    def assign_output(c1, c2):
+        c = output_tensor((c1.shape[0], height, width, c1.shape[3]), 'float32')
+        for x in range(c1.shape[0]):
+            for y in range(c1.shape[1]):
+                for z in range(c1.shape[2]):
+                    for t in range(c1.shape[3]):
+                        c[x,y,z,t] = c1[x,y,z,t]
+                for z in range(c2.shape[2]):
+                    for t in range(c2.shape[3]):
+                        c[x,y,z + c1.shape[2],t] = c2[x,y,z,t]
+        return c
+    # TODO
+
+    # tester si avec deux A c'est mieux ou pas
+
+    Out = assign_output(Out1, Out2)
 
     s = te.create_schedule(Out.op)
 
@@ -326,8 +334,10 @@ def conv2d_ttile_2kernel(name, batch_size, width, height, kernel_w, kernel_h, in
         "axe_xx1i": axe_xx1i,
         "axe_in_channels1o":axe_in_channels1o,
         "axe_in_channels1i": axe_in_channels1i,
-        "axe_out_channels1o":axe_yy1o,
+        "axe_out_channels1o":axe_out_channels1o,
         "axe_out_channels1i": axe_out_channels1i,
+        "axe_kernel_h1o": axe_kernel_h1,
+        "axe_kernel_w1o": axe_kernel_w1,
 
         "axe_yy2o":axe_yy2o,
         "axe_yy2i": axe_yy2i,
@@ -335,8 +345,10 @@ def conv2d_ttile_2kernel(name, batch_size, width, height, kernel_w, kernel_h, in
         "axe_xx2i": axe_xx2i,
         "axe_in_channels2o":axe_in_channels2o,
         "axe_in_channels2i": axe_in_channels2i,
-        "axe_out_channels2o":axe_yy2o,
+        "axe_out_channels2o":axe_out_channels2o,
         "axe_out_channels2i": axe_out_channels2i,
+        "axe_kernel_h2o": axe_kernel_h2,
+        "axe_kernel_w2o": axe_kernel_w2,
     }
 
     order1 = []
@@ -358,38 +370,33 @@ def conv2d_ttile_2kernel(name, batch_size, width, height, kernel_w, kernel_h, in
     s[Out1].reorder(*order1)
     s[Out2].reorder(*order2)
 
+    fuse_loop1 = []
+    fuse_loop2 = []
+
     if info_tile[1]["nb_loop_no_tensorize"] == 0:
         return s, [A, W, Out]
-    elif info_tile[1]["nb_loop_no_tensorize"] == 1: # check mais normalement le 0 c'est axe batch
-        fuse_loop1 = s[Out1].fuse(s[Out1].axis[0], s[Out1].axis[1])
-    elif info_tile[1]["nb_loop_no_tensorize"] == 1: # check mais normalement le 0 c'est axe batch
-        fuse_loop1 = s[Out1].fuse(s[Out1].axis[0], s[Out1].axis[1], s[Out1].axis[2])
-    elif info_tile[1]["nb_loop_no_tensorize"] == 1: # check mais normalement le 0 c'est axe batch
-        fuse_loop1 = s[Out1].fuse(s[Out1].axis[0], s[Out1].axis[1], s[Out1].axis[2], s[Out1].axis[3])
-    elif info_tile[1]["nb_loop_no_tensorize"] == 1: # check mais normalement le 0 c'est axe batch
-        fuse_loop1 = s[Out1].fuse(s[Out1].axis[0], s[Out1].axis[1], s[Out1].axis[2], s[Out1].axis[3], s[Out1].axis[4])
+    else: 
+        fuse_loop1 += [order1[k] for k in range(1, info_tile[1]["nb_loop_no_tensorize"])]
 
     if info_tile[2]["nb_loop_no_tensorize"] == 0:
         return s, [A, W, Out]
-    elif info_tile[2]["nb_loop_no_tensorize"] == 1: # check mais normalement le 0 c'est axe batch
-        fuse_loop1 = s[Out2].fuse(s[Out2].axis[0], s[Out2].axis[2])
-    elif info_tile[2]["nb_loop_no_tensorize"] == 1: # check mais normalement le 0 c'est axe batch
-        fuse_loop1 = s[Out2].fuse(s[Out2].axis[0], s[Out2].axis[2], s[Out2].axis[2])
-    elif info_tile[2]["nb_loop_no_tensorize"] == 1: # check mais normalement le 0 c'est axe batch
-        fuse_loop1 = s[Out2].fuse(s[Out2].axis[0], s[Out2].axis[2], s[Out2].axis[2], s[Out2].axis[3])
-    elif info_tile[2]["nb_loop_no_tensorize"] == 1: # check mais normalement le 0 c'est axe batch
-        fuse_loop1 = s[Out2].fuse(s[Out2].axis[0], s[Out2].axis[2], s[Out2].axis[2], s[Out2].axis[3], s[Out2].axis[4])
+    else: 
+        fuse_loop2 += [order2[k] for k in range(1, info_tile[2]["nb_loop_no_tensorize"])]
+
+    fuse_loop1 = s[Out1].fuse(*fuse_loop1)
+    fuse_loop2 = s[Out2].fuse(*fuse_loop2)
+
 
     s[Out1].parallel(fuse_loop1)
     s[Out2].parallel(fuse_loop2)
 
-    conv1 = intrin_gemv1(kernel_h, kernel_w, factor_in_channels1, factor_out_channels1, factor_xx1, factor_yy1)
-    conv2 = intrin_gemv2(kernel_h, kernel_w, factor_in_channels2, factor_out_channels2, factor_xx2, factor_yy2)
+    conv1 = intrin_conv("gen_conv1", kernel_h, kernel_w, factor_in_channels1, factor_out_channels1, factor_xx1, factor_yy1)
+    conv2 = intrin_conv("gen_conv2", kernel_h, kernel_w, factor_in_channels2, factor_out_channels2, factor_xx2, factor_yy2)
 
-    s[Out1].tensorize(dic_order[1]["axe_to_tensorize"], conv1)
-    s[Out1].pragma(axe_batch1, "import_llvm", conv_impl(name))
+    s[Out1].tensorize(dic_order[info_tile[1]["axe_to_tensorize"]], conv1)
+    s[Out1].pragma(axe_batch1, "import_llvm", conv_impl(name, len(info_tile)))
 
-    s[Out2].tensorize(dic_order[2]["axe_to_tensorize"], conv2)
+    s[Out2].tensorize(dic_order[info_tile[2]["axe_to_tensorize"]], conv2)
 
     print(tvm.lower(s, [A, W, Out], simple_mode=True))
 
@@ -398,7 +405,7 @@ def conv2d_ttile_2kernel(name, batch_size, width, height, kernel_w, kernel_h, in
 
 
 
-if __name__ == __main__:
+if __name__ == '__main__':
 
     name_conv = sys.argv[1]
     archi = sys.argv[2]
@@ -417,12 +424,14 @@ if __name__ == __main__:
     ctx = tvm.context(target)
     dtype = "float32"
 
-    info_tile = parser.parser("test")
+    info_tile = parser.parser(name_conv)
 
     if len(info_tile) == 1:
-        conv2d_ttile_1(name, batch_size, width, height, kernel_w, kernel_h, in_channels, out_channels)
+        s, I = conv2d_ttile_1kernel(name_conv, batch_size, width, height, kernel_w, kernel_h, in_channels, out_channels, info_tile)
+        A, W, Out = I
     else:
-        conv2d_ttile_2(name, batch_size, width, height, kernel_w, kernel_h, in_channels, out_channels)
+        s, I = conv2d_ttile_2kernel(name_conv, batch_size, width, height, kernel_w, kernel_h, in_channels, out_channels, info_tile)
+        A, W, Out = I
 
     func = tvm.build(s, [A, W, Out], target=target, name="conv")
 

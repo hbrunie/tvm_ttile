@@ -41,7 +41,7 @@ def flevel(info):
                 return k
     return 0
 
-def write_c_file(name, header, old_file, info):
+def write_c_file(name, header, old_file, info, suffix_name_fct = ""):
 
     """
     Function which write the C files for tensorize
@@ -53,6 +53,9 @@ def write_c_file(name, header, old_file, info):
             f.write(old_file[k].replace(") {", ", int strideO1, int strideO2, int strideA1, int strideA2, int strideW1, int strideW2, int strideW3) {"))
         elif "assert" in old_file[k]:
             continue
+        elif "gen_conv" in old_file[k]:
+            new_name_fct = "gen_conv" + suffix_name_fct
+            f.write(old_file[k].replace("gen_conv", new_name_fct))
         else:
             f.write(old_file[k])
 
@@ -66,7 +69,7 @@ def write_c_file(name, header, old_file, info):
     begin = info[level_][1]
     end = info[level_][2]
 
-    for k in range(begin, end):
+    for k in range(begin, end + 1):
         f.write(old_file[k])
 
     f.write("}\n"); # for the main
@@ -235,12 +238,11 @@ def parser(name):
         structure1 = structure[:number_of_level[1]]
         structure2 = [structure[0]] + structure[number_of_level[1]:]
 
-        level1 = write_c_file("tensorize_files/" + name + "1.c", structure[1][1], f, structure1)
-        level2 = write_c_file("tensorize_files/" + name + "2.c", structure[1][1], f, structure2)
+        level1 = write_c_file("tensorize_files/" + name + "1.c", structure[1][1], f, structure1, "1")
+        level2 = write_c_file("tensorize_files/" + name + "2.c", structure[1][1], f, structure2, "2")
 
     # information for tensorize i.e. factor of tilling
     info_tensorize = {}
-
 
     if len(number_of_level)==1:
         info_tensorize[1] = {
@@ -278,6 +280,6 @@ def parser(name):
 
     return info_tensorize
 
-print(parser("test"))
-print()
-print(parser("test2"))
+# print(parser("test"))
+# print()
+# print(parser("test2"))
