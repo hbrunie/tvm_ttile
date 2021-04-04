@@ -96,25 +96,23 @@ def replace(f, x, y):
             f[k] = f[k].replace(x, y)
     return f
 
-def factor(variable, structure, level):
+def factor(variable, structure):
     """
     Return the factor of each tile
     """
+    f = []
     if variable == "height":
         for k in range(1, len(structure)):
             l = structure[k][4]
             if "y" in l[0][0]:
                 return l[1]
-    for k in range(1, min(len(structure), level)):
-        l = structure[k][4]
-        if variable in l[0][0]:
-            return l[2]
     for k in range(1, len(structure)):
         l = structure[k][4]
         if variable in l[0][0]:
-            return l[1]
+            f += [l[2]]
+    return f
 
-def order(structure, level, suffix=""):
+def order(structure, suffix=""):
     """
     Return the loop order of the convolution
     """
@@ -137,7 +135,6 @@ def order(structure, level, suffix=""):
         "w": 0,
         "h": 0
     }
-    # for k in range(1, min(len(structure), level)):
     for k in range(1, len(structure)):
         l = structure[k][4]
         if "x" in l[0][0]:
@@ -152,10 +149,9 @@ def order(structure, level, suffix=""):
             variable = "f"
         elif "c" in l[0][0]:
             variable = "c"
-        suffix_loop = outter if number[variable] < 1 else inner
-        if convert[variable] + suffix_loop not in order:
-            order += [convert[variable] + suffix_loop]
-            number[variable] += 1
+        suffix_loop = str(number[variable])
+        order += [convert[variable] + "_" + suffix_loop]
+        number[variable] += 1
 
     return order
 
@@ -324,33 +320,34 @@ def parser(name):
 
         # information for tensorize i.e. factor of tilling
         info_tensorize = {}
+
         info_tensorize[1] = {
-            "height": factor("height", structure1, level1 + 1),
-            "factor_out_channels": factor("f", structure1, level1 + 1),
-            "factor_xx": factor("x", structure1, level1 + 1),
-            "factor_yy": factor("y", structure1, level1 + 1),
-            "factor_in_channels": factor("c", structure1, level1 + 1),
-            "order": order(structure1, level1 + 1, "1"),
+            "height": factor("height", structure1),
+            "factor_out_channels": factor("f", structure1),
+            "factor_xx": factor("x", structure1),
+            "factor_yy": factor("y", structure1),
+            "factor_in_channels": factor("c", structure1),
+            "order": order(structure1, "1"),
             "nb_loop_no_tensorize": level1 - 1,
-            "axe_to_tensorize": order(structure1, level1 + 1, "1")[level1 - 1]
+            "axe_to_tensorize": order(structure1, "1")[level1 - 1]
         }
         info_tensorize[2] = {
-            "height": factor("height", structure2, level2 + 1),
-            "factor_out_channels": factor("f", structure2, level2 + 1),
-            "factor_xx": factor("x", structure2, level2 + 1),
-            "factor_yy": factor("y", structure2, level2 + 1),
-            "factor_in_channels": factor("c", structure2, level2 + 1),
-            "order": order(structure2, level2 + 1, "2"),
+            "height": factor("height", structure2),
+            "factor_out_channels": factor("f", structure2),
+            "factor_xx": factor("x", structure2),
+            "factor_yy": factor("y", structure2),
+            "factor_in_channels": factor("c", structure2),
+            "order": order(structure2, "2"),
             "nb_loop_no_tensorize": level2 - 1,
-            "axe_to_tensorize": order(structure2, level2 + 1, "2")[level2 - 1]
+            "axe_to_tensorize": order(structure2, "2")[level2 - 1]
         }
-    for t in structure1:
-        print(t)
-    print()
-    for t in structure2:
-        print(t)
-    print(info_tensorize[1])
-    print(info_tensorize[2])
+    # for t in structure1:
+    #     print(t)
+    # print()
+    # for t in structure2:
+    #     print(t)
+    # print(info_tensorize[1])
+    # print(info_tensorize[2])
 
 
 
