@@ -2,7 +2,7 @@
 #include <immintrin.h>
 typedef int IND_TYPE;
 typedef float M_TYPE;
-    void gen_conv1(M_TYPE * const  __restrict__ output,
+        void gen_conv1(M_TYPE * const  __restrict__ output,
 M_TYPE const * const __restrict__ input, M_TYPE const * const __restrict__ params,
     IND_TYPE X, IND_TYPE W,
     IND_TYPE Y, IND_TYPE H,
