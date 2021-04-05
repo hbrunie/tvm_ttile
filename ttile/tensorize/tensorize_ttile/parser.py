@@ -1,5 +1,18 @@
+# Parser
 
-def level_of_tensorize(info):
+def find_level_max(f):
+    """
+    Find the level maximum to tensorize
+    i.e. when the loop load output
+    """
+    number_of_for = 0
+    for k in f:
+        if "for" in k:
+            number_of_for += 1
+        if "loadu_ps" in k:
+            return number_of_for
+
+def level_of_tensorize(info, f):
     """
     Function which search the level where we can cut to tensorize.
     If it is the second time we have a variable or it is a reduction loop
@@ -13,6 +26,8 @@ def level_of_tensorize(info):
         'h': 0,
         'w': 0
     }
+
+    level_max = find_level_max(f)
 
     for k in range(len(info)):
         if "for" == info[k][0]:
@@ -41,6 +56,8 @@ def level_of_tensorize(info):
                 return k
             if "w" in variable:
                 return k
+            if k >= level_max:
+                return k
     return 0
 
 def write_c_file(name, header, old_file, info, suffix_name_fct = "", out_h1 = 0):
@@ -67,7 +84,7 @@ typedef float M_TYPE;
         else:
             f.write(old_file[k])
 
-    level_ = level_of_tensorize(info)
+    level_ = level_of_tensorize(info, old_file)
 
     # we need to init value of delete loop
     for i in range(level_):
@@ -80,7 +97,7 @@ typedef float M_TYPE;
     end = info[level_][2]
 
     for k in range(begin, end + 1):
-        if suffix_name_fct == "2" and "+ " + str(out_h1) in old_file[k]:
+        if suffix_name_fct == "2" and "y" in old_file[k] and "+ " + str(out_h1) in old_file[k]:
             f.write(old_file[k].replace("+ " + str(out_h1), ""))
         else:
             f.write(old_file[k])
@@ -100,7 +117,7 @@ def replace(f, x, y):
             f[k] = f[k].replace(x, y)
     return f
 
-def factor(variable, structure):
+def factor(variable, structure, level_max, split = False):
     """
     Return the factor of each tile
     """
@@ -109,19 +126,23 @@ def factor(variable, structure):
         for k in range(1, len(structure)):
             l = structure[k][4]
             if "y" in l[0][0]:
-                return l[1]
-    for k in range(1, len(structure)):
+                return l[2] - l[1]
+    for k in range(1, min(len(structure), level_max)):
         l = structure[k][4]
         if variable in l[0][0]:
-            f += [l[2]]
-    return f
+            f += [l[3]]
+    if len(f) == 0 and variable == "y" and split == True:
+        h = factor("height", structure, level_max)
+        f = [h]
+    if len(f) == 0:
+        return [1]
+    else:
+        return f
 
-def order(structure, suffix=""):
+def order(structure, level_max, suffix=""):
     """
     Return the loop order of the convolution
     """
-    outter = 'o'
-    inner = 'i'
     order = []
     convert = {
         "f": "axe_out_channels" + suffix,
@@ -139,6 +160,9 @@ def order(structure, suffix=""):
         "w": 0,
         "h": 0
     }
+
+
+
     for k in range(1, len(structure)):
         l = structure[k][4]
         if "x" in l[0][0]:
@@ -153,9 +177,11 @@ def order(structure, suffix=""):
             variable = "f"
         elif "c" in l[0][0]:
             variable = "c"
-        suffix_loop = str(number[variable])
-        order += [convert[variable] + "_" + suffix_loop]
-        number[variable] += 1
+        split_max = len(factor(variable, structure, level_max))
+        if number[variable] < split_max + 1:
+            suffix_loop = str(number[variable])
+            order += [convert[variable] + "_" + suffix_loop]
+            number[variable] += 1
 
     return order
 
@@ -176,6 +202,37 @@ def delete_loop(f, begin, end):
     for k in range(end, begin - 1, -1):
         del f[k]
     return f
+
+def delete_useless_loop(f, structure):
+    """
+    Delete useless loop i.e. when the loop do one iteration
+    """
+    delete_struct = []
+    delete_file = []
+    variable
+    fil = open("f1.c", "w")
+    for t in f:
+        fil.write(t)
+    fil.close()
+    for k in range(len(structure)):
+        if "for" in structure[k][0]:
+            if structure[k][4][2] == structure[k][4][3]:# and "h" not in structure[k][4][0][0] and "w" not in structure[k][4][0][0]:
+                delete_struct += [k]
+                delete_file += [structure[k][1]]
+                delete_file += [structure[k][2]]
+    delete_file.sort()
+    delete_struct.sort()
+    for k in range(len(delete_struct)):
+        del structure[delete_struct[-k - 1]]
+
+    for k in range(len(delete_file)):
+        del f[delete_file[-k - 1]]
+
+    # fil = open("f1_.c", "w")
+    # for t in f:
+    #     fil.write(t)
+    # fil.close()
+    return f, structure
 
 def compute_structure(f):
 
@@ -201,6 +258,7 @@ def compute_structure(f):
             level of loop
             [
                 [variables]
+                begin of this variable
                 end of this variable
                 increment
             ]
@@ -224,7 +282,19 @@ def compute_structure(f):
                         v += [loop[element].split(",")[0]]
                         if element == 0:
                             v2 += [loop[element].split(",")[1]]
-                    structure += [["for", k, 0, level, [[v[0].split("=")[0], v2[0].split("=")[0]], int(v[1].split("+")[-1]), int(v[2].split("+=")[1])]]]
+                    if len(v[1].split("+")) > 2:
+                        bornesup = 0
+                        for b in range(len(v[1].split("+")) - 1):
+                            bornesup += int(v[1].split("+")[-1 - b])
+                    else:
+                        bornesup = int(v[1].split("+")[-1])
+                    if len(v[0].split("+")) >= 1:
+                        borneinf = 0
+                        for b in range(len(v[0].split("+")) - 1):
+                            borneinf += int(v[0].split("+")[-1 - b])
+                    else:
+                        borneinf = 0
+                    structure += [["for", k, 0, level, [[v[0].split("=")[0], v2[0].split("=")[0]], borneinf, bornesup, int(v[2].split("+=")[1])]]]
                     number_bracketl += 1
                     level += 1
                 else:
@@ -238,7 +308,10 @@ def compute_structure(f):
                 structure[id][2] = k
         return structure
 
+    # TODO change that
     s_ = compute_structure_(f)
+    # f, s_ = delete_useless_loop(f, s_)
+    # s_ = compute_structure_(f)
 
     # I search the number of loop level i.e. if I need to have one or two files
     number_of_level = [0 for k in range(20)]
@@ -261,13 +334,12 @@ def compute_structure(f):
 
     return 2, f1, structure1, f2, structure2
 
-
 def parser(name):
 
     """
     Function which parse C file to create new C files for tensorize
 
-     Return a dic with factor of tille
+    Return a dic with factor of tille
     """
 
     # open the C file
@@ -302,6 +374,11 @@ def parser(name):
 
     number_of_file, f1, structure1, f2, structure2 = compute_structure(f)
 
+    for t in structure1:
+        print(t)
+    for t in structure2:
+        print(t)
+
     if number_of_file == 1:
         level1 = write_c_file("tensorize_files/" + name + ".c", structure1[1][1], f1, structure1)
 
@@ -309,42 +386,43 @@ def parser(name):
         info_tensorize = {}
 
         info_tensorize[1] = {
-            "factor_out_channels": factor("f", structure1),
-            "factor_xx": factor("x", structure1),
-            "factor_yy": factor("y", structure1),
-            "factor_in_channels": factor("c", structure1),
+            "factor_out_channels": factor("f", structure1, level1),
+            "factor_xx": factor("x", structure1, level1),
+            "factor_yy": factor("y", structure1, level1),
+            "factor_in_channels": factor("c", structure1, level1),
             "order": order(structure1),
             "nb_loop_no_tensorize": level1 - 1,
             "axe_to_tensorize": order(structure1)[level1 - 1]
         }
 
     else:
-        out_h1 = factor("height", structure1)
+
         level1 = write_c_file("tensorize_files/" + name + "1.c", structure1[1][1], f1, structure1, "1")
+        out_h1 = factor("height", structure1, level1, True)
         level2 = write_c_file("tensorize_files/" + name + "2.c", structure2[1][1], f2, structure2, "2", out_h1)
 
         # information for tensorize i.e. factor of tilling
         info_tensorize = {}
 
         info_tensorize[1] = {
-            "height": factor("height", structure1),
-            "factor_out_channels": factor("f", structure1),
-            "factor_xx": factor("x", structure1),
-            "factor_yy": factor("y", structure1),
-            "factor_in_channels": factor("c", structure1),
-            "order": order(structure1, "1"),
+            "height": factor("height", structure1, level1, True),
+            "factor_out_channels": factor("f", structure1, level1, True),
+            "factor_xx": factor("x", structure1, level1, True),
+            "factor_yy": factor("y", structure1, level1, True),
+            "factor_in_channels": factor("c", structure1, level1, True),
+            "order": order(structure1, level1, "1"),# + ["axe_kernel_h1_0", "axe_kernel_w1_0"],
             "nb_loop_no_tensorize": level1 - 1,
-            "axe_to_tensorize": order(structure1, "1")[level1 - 1]
+            "axe_to_tensorize": order(structure1, level1 + 1, "1")[level1 - 1]
         }
         info_tensorize[2] = {
-            "height": factor("height", structure2),
-            "factor_out_channels": factor("f", structure2),
-            "factor_xx": factor("x", structure2),
-            "factor_yy": factor("y", structure2),
-            "factor_in_channels": factor("c", structure2),
-            "order": order(structure2, "2"),
+            "height": factor("height", structure2, level2, True),
+            "factor_out_channels": factor("f", structure2, level2, True),
+            "factor_xx": factor("x", structure2, level2, True),
+            "factor_yy": factor("y", structure2, level2, True),
+            "factor_in_channels": factor("c", structure2, level2, True),
+            "order": order(structure2, level2, "2"),# + ["axe_kernel_h2_0", "axe_kernel_w2_0"],
             "nb_loop_no_tensorize": level2 - 1,
-            "axe_to_tensorize": order(structure2, "2")[level2 - 1]
+            "axe_to_tensorize": order(structure2, level2 + 1, "2")[level2 - 1]
         }
 
 

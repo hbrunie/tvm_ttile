@@ -76,6 +76,8 @@ def intrin_conv(name_function, W, H, C, F, X, Y):
     Y = height
     """
 
+    print("name_function, W, H, C, F, X, Y", name_function, W, H, C, F, X, Y)
+
     a = te.placeholder((1, X + H - 1, Y + W - 1, C), name="a")
     w = te.placeholder((W, H, C, F), name="b")
 
@@ -101,6 +103,9 @@ def intrin_conv(name_function, W, H, C, F, X, Y):
         a[batch, stride_w * xx + axe_kernel_w, stride_h * yy + axe_kernel_h, axe_in_channels]* w[axe_kernel_w, axe_kernel_h, axe_in_channels, out_channels ],
         axis=[axe_in_channels, axe_kernel_h, axe_kernel_w],)
     )
+    print('a',a.shape)
+    print('w',w.shape)
+    print('o',o.shape)
     Ab = tvm.tir.decl_buffer(a.shape, a.dtype, name="A", offset_factor=1, strides=[strideA1, strideA2, strideA3, 1])
     Ww = tvm.tir.decl_buffer(w.shape, w.dtype, name="W", offset_factor=1, strides=[strideB1, strideB2, strideB3, 1])
     Oo = tvm.tir.decl_buffer(o.shape, o.dtype, name="O", offset_factor=1, strides=[strideC1, strideC2, strideC3, 1])
@@ -284,6 +289,10 @@ def conv2d_ttile_2kernel(name, batch_size, width, height, kernel_w, kernel_h, in
 
     Out = assign_output(Out1, Out2)
 
+    print('A',A.shape)
+    print('W',W.shape)
+    print('O',Out.shape)
+
     s = te.create_schedule(Out.op)
 
     n, h, out_h1, out_f1, out_h2, out_f2 = Out.op.axis
@@ -325,6 +334,10 @@ def conv2d_ttile_2kernel(name, batch_size, width, height, kernel_w, kernel_h, in
     order_string1 = info_tile[1]["order"]
     order_string2 = info_tile[2]["order"]
 
+    print(order_string1)
+    print()
+    print(order_string2)
+
     order1 = [locals()["axe_batch1_0"]]
     for k in order_string1:
         order1 += [locals()[k]]
@@ -346,23 +359,28 @@ def conv2d_ttile_2kernel(name, batch_size, width, height, kernel_w, kernel_h, in
     if info_tile[1]["nb_loop_no_tensorize"] == 0:
         return s, [A, W, Out]
     else:
-        fuse_loop1 += [order1[k] for k in range(1, info_tile[1]["nb_loop_no_tensorize"])]
+        fuse_loop1 += [order1[k] for k in range(1, info_tile[1]["nb_loop_no_tensorize"]+1 )]
 
     if info_tile[2]["nb_loop_no_tensorize"] == 0:
         return s, [A, W, Out]
     else:
-        fuse_loop2 += [order2[k] for k in range(1, info_tile[2]["nb_loop_no_tensorize"])]
+        fuse_loop2 += [order2[k] for k in range(1, info_tile[2]["nb_loop_no_tensorize"]+1)]
 
-    fuse_loop1 = s[Out1].fuse(*fuse_loop1)
-    fuse_loop2 = s[Out2].fuse(*fuse_loop2)
+    print("fuse", fuse_loop1, fuse_loop2)
+    # print(tvm.lower(s, [A, W, Out], simple_mode=True))
+
+    # fuse_loop1 = s[Out1].fuse(*fuse_loop1)
+    # fuse_loop2 = s[Out2].fuse(*fuse_loop2)
+    #
+    #
+    # s[Out1].parallel(fuse_loop1)
+    # s[Out2].parallel(fuse_loop2)
+
+    # print(tvm.lower(s, [A, W, Out], simple_mode=True))
 
 
-    s[Out1].parallel(fuse_loop1)
-    s[Out2].parallel(fuse_loop2)
-
-    # ici faut changer les factors
-    conv1 = intrin_conv("gen_conv1", kernel_h, kernel_w, locals()["factor_in_channels1_0"], locals()["factor_out_channels1_0"], locals()["factor_xx1_0"], size_h1)
-    conv2 = intrin_conv("gen_conv2", kernel_h, kernel_w, locals()["factor_in_channels2_0"], locals()["factor_out_channels2_0"], locals()["factor_xx2_0"], size_h2)
+    conv1 = intrin_conv("gen_conv1", kernel_h, kernel_w, locals()["factor_in_channels1_0"], locals()["factor_out_channels1_0"], locals()["factor_xx1_0"], locals()["factor_yy1_0"])
+    conv2 = intrin_conv("gen_conv2", kernel_h, kernel_w, locals()["factor_in_channels2_0"], locals()["factor_out_channels2_0"], locals()["factor_xx2_0"], locals()["factor_yy2_0"])
 
     s[Out1].tensorize(locals()[info_tile[1]["axe_to_tensorize"]], conv1)
     s[Out1].pragma(locals()["axe_batch1_0"], "import_llvm", conv_impl(name, len(info_tile)))
@@ -394,6 +412,8 @@ if __name__ == '__main__':
     dtype = "float32"
 
     info_tile = parser.parser(name_conv)
+
+    print(info_tile)
 
     if len(info_tile) == 1:
         s, I = conv2d_ttile_1kernel(name_conv, batch_size, width, height, kernel_w, kernel_h, in_channels, out_channels, info_tile)
