@@ -374,10 +374,10 @@ def parser(name):
 
     number_of_file, f1, structure1, f2, structure2 = compute_structure(f)
 
-    for t in structure1:
-        print(t)
-    for t in structure2:
-        print(t)
+    # for t in structure1:
+    #     print(t)
+    # for t in structure2:
+    #     print(t)
 
     if number_of_file == 1:
         level1 = write_c_file("tensorize_files/" + name + ".c", structure1[1][1], f1, structure1)
@@ -425,5 +425,5 @@ def parser(name):
             "axe_to_tensorize": order(structure2, level2 + 1, "2")[level2 - 1]
         }
 
-
+    # print(info_tensorize)
     return info_tensorize
