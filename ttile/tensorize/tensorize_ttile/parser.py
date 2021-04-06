@@ -32,11 +32,6 @@ def level_of_tensorize(info, f):
     for k in range(len(info)):
         if "for" == info[k][0]:
             variable = info[k][4][0][0]
-            if "c" in variable:
-                if dic["c"] == 1:
-                    return k
-                else:
-                    dic["c"] += 1
             if "h" in variable:
                 return k
             if "w" in variable:
@@ -130,6 +125,7 @@ def factor(variable, structure, level_max, split = False):
     return f
 
 def find_size_tensorize(variable, lorder, level, factors, height_y):
+    letter = variable
     if len(factors) == 0:
         if variable == "y":
             return height_y
@@ -150,10 +146,10 @@ def find_size_tensorize(variable, lorder, level, factors, height_y):
         if variable in lorder[k]:
             id += 1
     if id == 0:
-        if variable == "y":
+        if letter == "y":
             return height_y
         else:
-            return size[variable]
+            return size[letter]
     else:
         return factors[id - 1]
 
@@ -400,8 +396,8 @@ def parser(name):
 
     for t in structure1:
         print(t)
-    for t in structure2:
-        print(t)
+    # for t in structure2:
+    #     print(t)
 
     print(info_order)
 
@@ -411,21 +407,24 @@ def parser(name):
         # information for tensorize i.e. factor of tilling
         info_tensorize = {}
 
+        order1 = order(info_order)
+        height1 = size["y"] 
+
         info_tensorize[1] = {
             "factor_out_channels": factor("f", structure1, level1),
             "factor_xx": factor("x", structure1, level1),
             "factor_yy": factor("y", structure1, level1),
             "factor_in_channels": factor("c", structure1, level1),
-            "order": order(info_order), #order(structure1),
+            "order": order1,
             "nb_loop_no_tensorize": level1 - 1,
-            "axe_to_tensorize": order(info_order)[level1 - 1],
-            "h_t": find_size_tensorize("h", structure1, level1), 
-            "w_t": find_size_tensorize("w", structure1, level1), 
-            "f_t": find_size_tensorize("f", structure1, level1), 
-            "c_t": find_size_tensorize("c", structure1, level1), 
-            "x_t": find_size_tensorize("x", structure1, level1), 
-            "y_t": find_size_tensorize("y", structure1, level1), 
-            "fuse": find_fuse(structure1, level1, order(info_order)),
+            "axe_to_tensorize": order1[level1 - 1],
+            "h_t": find_size_tensorize("h", order1, level1, [], height1), 
+            "w_t": find_size_tensorize("w", order1, level1, [], height1), 
+            "f_t": find_size_tensorize("f", order1, level1, factor("f", structure1, level1), height1), 
+            "c_t": find_size_tensorize("c", order1, level1, factor("c", structure1, level1), height1), 
+            "x_t": find_size_tensorize("x", order1, level1, factor("x", structure1, level1), height1), 
+            "y_t": find_size_tensorize("y", order1, level1, factor("y", structure1, level1), height1), 
+            "fuse": find_fuse(structure1, level1, order1),
         }
 
     else:
@@ -478,7 +477,7 @@ def parser(name):
             "fuse": find_fuse(structure2, level2, order2),
         }
     print("####")
-    for i in [1,2]:
+    for i in [1]:
         for key in info_tensorize[i]:
             print(key, info_tensorize[i][key])
     print("####")
