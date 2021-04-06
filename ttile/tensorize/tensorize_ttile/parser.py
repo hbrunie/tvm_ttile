@@ -32,21 +32,6 @@ def level_of_tensorize(info, f):
     for k in range(len(info)):
         if "for" == info[k][0]:
             variable = info[k][4][0][0]
-            if "y" in variable:
-                if dic["y"] == 1:
-                    return k
-                else:
-                    dic["y"] += 1
-            if "x" in variable:
-                if dic["x"] == 1:
-                    return k
-                else:
-                    dic["x"] += 1
-            if "f" in variable:
-                if dic["f"] == 1:
-                    return k
-                else:
-                    dic["f"] += 1
             if "c" in variable:
                 if dic["c"] == 1:
                     return k
@@ -59,6 +44,15 @@ def level_of_tensorize(info, f):
             if k >= level_max:
                 return k
     return 0
+
+size = {
+    "c": 0,
+    "f": 0,
+    "x": 0,
+    "y": 0,
+    "h": 0,
+    "w": 0,
+}
 
 def write_c_file(name, header, old_file, info, suffix_name_fct = "", out_h1 = 0):
 
@@ -76,7 +70,7 @@ typedef float M_TYPE;
     for k in range(header):
         if ") {" in old_file[k]:
             f.write(old_file[k].replace(") {", ", int strideO1, int strideO2, int strideA1, int strideA2, int strideW1, int strideW2, int strideW3) {"))
-        elif "assert" in old_file[k] or "#include" in old_file[k]:
+        elif "#include" in old_file[k] or "assert" in old_file[k]:
             continue
         elif "gen_conv" in old_file[k]:
             new_name_fct = "gen_conv" + suffix_name_fct
@@ -127,63 +121,41 @@ def factor(variable, structure, level_max, split = False):
             l = structure[k][4]
             if "y" in l[0][0]:
                 return l[2] - l[1]
-    for k in range(1, min(len(structure), level_max)):
-        l = structure[k][4]
-        if variable in l[0][0]:
-            f += [l[3]]
-    if len(f) == 0 and variable == "y" and split == True:
-        h = factor("height", structure, level_max)
-        f = [h]
-    if len(f) == 0:
-        return [1]
-    else:
-        return f
-
-def order(structure, level_max, suffix=""):
-    """
-    Return the loop order of the convolution
-    """
-    order = []
-    convert = {
-        "f": "axe_out_channels" + suffix,
-        "c": "axe_in_channels" + suffix,
-        "x": "axe_xx" + suffix,
-        "y": "axe_yy" + suffix,
-        "w": "axe_kernel_w" + suffix,
-        "h": "axe_kernel_h" + suffix
-    }
-    number = {
-        "f": 0,
-        "c": 0,
-        "x": 0,
-        "y": 0,
-        "w": 0,
-        "h": 0
-    }
-
-
 
     for k in range(1, len(structure)):
         l = structure[k][4]
-        if "x" in l[0][0]:
-            variable = "x"
-        elif "y" in l[0][0]:
-            variable = "y"
-        elif "h" in l[0][0]:
-            variable = "h"
-        elif "w" in l[0][0]:
-            variable = "w"
-        elif "f" in l[0][0]:
-            variable = "f"
-        elif "c" in l[0][0]:
-            variable = "c"
-        split_max = len(factor(variable, structure, level_max))
-        if number[variable] < split_max + 1:
-            suffix_loop = str(number[variable])
-            order += [convert[variable] + "_" + suffix_loop]
-            number[variable] += 1
+        if variable in l[0][0]:
+            f += [l[3]]
 
-    return order
+    return f
+
+def find_size_tensorize(variable, lorder, level, factors, height_y):
+    if len(factors) == 0:
+        if variable == "y":
+            return height_y
+        else:
+            return size[variable]
+    axe_to_tensorize = lorder[level - 1]
+    convert = {
+        "f": "axe_out_channels",
+        "c": "axe_in_channels",
+        "x": "axe_xx",
+        "y": "axe_yy",
+        "w": "axe_kernel_w",
+        "h": "axe_kernel_h"
+    }
+    variable = convert[variable]
+    id = 0
+    for k in range(level):
+        if variable in lorder[k]:
+            id += 1
+    if id == 0:
+        if variable == "y":
+            return height_y
+        else:
+            return size[variable]
+    else:
+        return factors[id - 1]
 
 def find_loop_to_delete(structure, id):
     """
@@ -202,37 +174,6 @@ def delete_loop(f, begin, end):
     for k in range(end, begin - 1, -1):
         del f[k]
     return f
-
-def delete_useless_loop(f, structure):
-    """
-    Delete useless loop i.e. when the loop do one iteration
-    """
-    delete_struct = []
-    delete_file = []
-    variable
-    fil = open("f1.c", "w")
-    for t in f:
-        fil.write(t)
-    fil.close()
-    for k in range(len(structure)):
-        if "for" in structure[k][0]:
-            if structure[k][4][2] == structure[k][4][3]:# and "h" not in structure[k][4][0][0] and "w" not in structure[k][4][0][0]:
-                delete_struct += [k]
-                delete_file += [structure[k][1]]
-                delete_file += [structure[k][2]]
-    delete_file.sort()
-    delete_struct.sort()
-    for k in range(len(delete_struct)):
-        del structure[delete_struct[-k - 1]]
-
-    for k in range(len(delete_file)):
-        del f[delete_file[-k - 1]]
-
-    # fil = open("f1_.c", "w")
-    # for t in f:
-    #     fil.write(t)
-    # fil.close()
-    return f, structure
 
 def compute_structure(f):
 
@@ -334,6 +275,49 @@ def compute_structure(f):
 
     return 2, f1, structure1, f2, structure2
 
+def find_fuse(structure, level, order):
+    fuse = []
+    for k in range(level - 1):
+        begin = structure[k + 1][4][1]
+        end = structure[k + 1][4][2]
+        split = structure[k + 1][4][3]
+        no_useless = (end - begin) // split != 1
+        # print("ffuse", end, begin ,split)
+        if no_useless:
+            fuse += [order[k]]
+    return fuse
+
+def order(o, suffix=""):
+    """
+    Return the loop order of the convolution
+    """
+    order = []
+    convert = {
+        "f": "axe_out_channels" + suffix,
+        "c": "axe_in_channels" + suffix,
+        "x": "axe_xx" + suffix,
+        "y": "axe_yy" + suffix,
+        "w": "axe_kernel_w" + suffix,
+        "h": "axe_kernel_h" + suffix
+    }
+    number = {
+        "f": 0,
+        "c": 0,
+        "x": 0,
+        "y": 0,
+        "w": 0,
+        "h": 0
+    }
+
+    for k in range(len(o)):
+        variable = o[k]
+        suffix_loop = str(number[variable])
+        order += [convert[variable] + "_" + suffix_loop]
+        number[variable] += 1
+
+    return order
+
+
 def parser(name):
 
     """
@@ -347,6 +331,10 @@ def parser(name):
     f = file_.readlines()
     file_.close()
 
+    info_orderbegin = 0
+    info_orderend = 0
+    info_order = ""
+
     # I change the code to create the for on one line
     delete = []
     for k in range(len(f)):
@@ -356,6 +344,42 @@ def parser(name):
             delete += [k+2]
         if list(f[k]) == ["\n"]:
             delete += [k]
+        if "assert" in f[k]:
+            eq = f[k].split(")")[0].split("(")[-1]
+            var, val = eq.split("==")
+            var = var.replace(" ", "")
+            val = val.replace(" ", "")
+            size[var.lower()] = int(val)
+        if "/*" in f[k]:
+            info_orderbegin = k
+        if "*/" in f[k]:
+            info_orderend = k
+    
+    for k in range(info_orderbegin + 1, info_orderend):
+        info_order += f[k]
+
+    info_order = info_order.replace("\n", "")
+
+    linfo_order = info_order.split(";")
+
+    info_order = []
+
+    for k in linfo_order:
+        if "Hoist_vars" not in k and "V" not in k:
+            if "x" in k:
+                info_order += ["x"]
+            elif "y" in k:
+                info_order += ["y"]
+            elif "f" in k:
+                info_order += ["f"]
+            elif "c" in k:
+                info_order += ["c"]
+            elif "h" in k:
+                info_order += ["h"]
+            elif "w" in k:
+                info_order += ["w"]
+
+    info_order.reverse()
 
     # we delete the part useless of for
     # order is important like we delete
@@ -374,10 +398,12 @@ def parser(name):
 
     number_of_file, f1, structure1, f2, structure2 = compute_structure(f)
 
-    # for t in structure1:
-    #     print(t)
-    # for t in structure2:
-    #     print(t)
+    for t in structure1:
+        print(t)
+    for t in structure2:
+        print(t)
+
+    print(info_order)
 
     if number_of_file == 1:
         level1 = write_c_file("tensorize_files/" + name + ".c", structure1[1][1], f1, structure1)
@@ -390,9 +416,16 @@ def parser(name):
             "factor_xx": factor("x", structure1, level1),
             "factor_yy": factor("y", structure1, level1),
             "factor_in_channels": factor("c", structure1, level1),
-            "order": order(structure1),
+            "order": order(info_order), #order(structure1),
             "nb_loop_no_tensorize": level1 - 1,
-            "axe_to_tensorize": order(structure1, level1 + 1)[level1 - 1]
+            "axe_to_tensorize": order(info_order)[level1 - 1],
+            "h_t": find_size_tensorize("h", structure1, level1), 
+            "w_t": find_size_tensorize("w", structure1, level1), 
+            "f_t": find_size_tensorize("f", structure1, level1), 
+            "c_t": find_size_tensorize("c", structure1, level1), 
+            "x_t": find_size_tensorize("x", structure1, level1), 
+            "y_t": find_size_tensorize("y", structure1, level1), 
+            "fuse": find_fuse(structure1, level1, order(info_order)),
         }
 
     else:
@@ -403,6 +436,12 @@ def parser(name):
 
         # information for tensorize i.e. factor of tilling
         info_tensorize = {}
+        
+        order1 = order(info_order, "1")
+        order2 = order(info_order, "2")
+
+        height1 = factor("height", structure1, level1, True)
+        height2 = factor("height", structure2, level2, True)
 
         info_tensorize[1] = {
             "height": factor("height", structure1, level1, True),
@@ -410,9 +449,16 @@ def parser(name):
             "factor_xx": factor("x", structure1, level1, True),
             "factor_yy": factor("y", structure1, level1, True),
             "factor_in_channels": factor("c", structure1, level1, True),
-            "order": order(structure1, level1, "1"),# + ["axe_kernel_h1_0", "axe_kernel_w1_0"],
+            "order": order1,
             "nb_loop_no_tensorize": level1 - 1,
-            "axe_to_tensorize": order(structure1, level1 + 1, "1")[level1 - 1]
+            "axe_to_tensorize": order1[level1 - 1],
+            "h_t": find_size_tensorize("h", order1, level1, [], height1), 
+            "w_t": find_size_tensorize("w", order1, level1, [], height1), 
+            "f_t": find_size_tensorize("f", order1, level1, factor("f", structure1, level1, True), height1), 
+            "c_t": find_size_tensorize("c", order1, level1, factor("c", structure1, level1, True), height1), 
+            "x_t": find_size_tensorize("x", order1, level1, factor("x", structure1, level1, True), height1), 
+            "y_t": find_size_tensorize("y", order1, level1, factor("y", structure1, level1, True), height1), 
+            "fuse": find_fuse(structure1, level1, order1),
         }
         info_tensorize[2] = {
             "height": factor("height", structure2, level2, True),
@@ -420,10 +466,20 @@ def parser(name):
             "factor_xx": factor("x", structure2, level2, True),
             "factor_yy": factor("y", structure2, level2, True),
             "factor_in_channels": factor("c", structure2, level2, True),
-            "order": order(structure2, level2, "2"),# + ["axe_kernel_h2_0", "axe_kernel_w2_0"],
+            "order": order2,
             "nb_loop_no_tensorize": level2 - 1,
-            "axe_to_tensorize": order(structure2, level2 + 1, "2")[level2 - 1]
+            "axe_to_tensorize": order2[level2 - 1],
+            "h_t": find_size_tensorize("h", order2, level2, [], height2), 
+            "w_t": find_size_tensorize("w", order2, level2, [], height2), 
+            "f_t": find_size_tensorize("f", order2, level2, factor("f", structure2, level2, True), height2),
+            "c_t": find_size_tensorize("c", order2, level2, factor("c", structure2, level2, True), height2), 
+            "x_t": find_size_tensorize("x", order2, level2, factor("x", structure2, level2, True), height2), 
+            "y_t": find_size_tensorize("y", order2, level2, factor("y", structure2, level2, True), height2), 
+            "fuse": find_fuse(structure2, level2, order2),
         }
-
-    # print(info_tensorize)
+    print("####")
+    for i in [1,2]:
+        for key in info_tensorize[i]:
+            print(key, info_tensorize[i][key])
+    print("####")
     return info_tensorize

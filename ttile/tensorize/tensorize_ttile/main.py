@@ -7,6 +7,7 @@ import string
 import input_conv
 import parser
 import sys
+import os
 
 def generate_ttile_conv2d(name_file, number_of_file):
 
@@ -159,22 +160,6 @@ def intrin_conv(name_function, W, H, C, F, X, Y):
 
     return te.decl_tensor_intrin(o.op, intrin_func, binds={a: Ab, w: Ww, o: Oo})
 
-
-def axe_yy_before_to_tensorize(info_tile):
-    axe_tensorize = info_tile[1]["axe_to_tensorize"]
-    order = info_tile[1]["order"]
-    id_yy = 0
-    id_tensorize = 0
-    for k in range(len(order)):
-        if order[k] == "axe_yy1_0":
-            id_yy = k
-        if order[k] == axe_tensorize:
-            id_tensorize = k
-    if id_yy < id_tensorize:
-        return True
-    else:
-        return False
-
 def conv2d_ttile_1kernel(name, batch_size, width, height, kernel_w, kernel_h, in_channels, out_channels, info_tile):
     A = te.placeholder((batch_size, width + kernel_w - 1, height + kernel_h - 1, in_channels), name="A")
     W = te.placeholder((kernel_w, kernel_h, in_channels, out_channels), name="W")
@@ -321,41 +306,28 @@ def conv2d_ttile_2kernel(name, batch_size, width, height, kernel_w, kernel_h, in
                 locals()[factor + str(id_conv) + "_" + str(nb_factor)] = info_tile[id_conv][factor][nb_factor]
 
     for id_conv in [1]:
-        for name_axe in ["out_channels", "xx", "in_channels"]:
+        for name_axe in ["out_channels", "xx", "yy", "in_channels"]:
             factor = "factor_" + name_axe
             for nb_factor in range(len(info_tile[id_conv][factor])):
                 axe0 = "axe_" + name_axe + str(id_conv) + "_" + str(nb_factor)
                 axe1 = "axe_" + name_axe + str(id_conv) + "_" + str(nb_factor + 1)
                 locals()[axe0], locals()[axe1] = s[Out1].split(locals()[axe0], factor = locals()["factor_" + name_axe + str(id_conv) + "_" + str(nb_factor)])
-        for name_axe in ["yy"]:
-            factor = "factor_" + name_axe
-            if axe_yy_before_to_tensorize(info_tile):
-                for nb_factor in range(len(info_tile[id_conv][factor])):
-                    axe0 = "axe_" + name_axe + str(id_conv) + "_" + str(nb_factor)
-                    axe1 = "axe_" + name_axe + str(id_conv) + "_" + str(nb_factor + 1)
-                    locals()[axe0], locals()[axe1] = s[Out1].split(locals()[axe0], factor = locals()["factor_" + name_axe + str(id_conv) + "_" + str(nb_factor)])
-
 
     for id_conv in [2]:
-        for name_axe in ["out_channels", "xx", "in_channels"]:
+        for name_axe in ["out_channels", "xx", "yy", "in_channels"]:
             factor = "factor_" + name_axe
             for nb_factor in range(len(info_tile[id_conv][factor])):
                 axe0 = "axe_" + name_axe + str(id_conv) + "_" + str(nb_factor)
                 axe1 = "axe_" + name_axe + str(id_conv) + "_" + str(nb_factor + 1)
                 locals()[axe0], locals()[axe1] = s[Out2].split(locals()[axe0], factor = locals()["factor_" + name_axe + str(id_conv) + "_" + str(nb_factor)])
-        for name_axe in ["yy"]:
-            factor = "factor_" + name_axe
-            if axe_yy_before_to_tensorize(info_tile):
-                for nb_factor in range(len(info_tile[id_conv][factor])):
-                    axe0 = "axe_" + name_axe + str(id_conv) + "_" + str(nb_factor)
-                    axe1 = "axe_" + name_axe + str(id_conv) + "_" + str(nb_factor + 1)
-                    locals()[axe0], locals()[axe1] = s[Out2].split(locals()[axe0], factor = locals()["factor_" + name_axe + str(id_conv) + "_" + str(nb_factor)])
 
     order1 = []
     order2 = []
 
     order_string1 = info_tile[1]["order"]
     order_string2 = info_tile[2]["order"]
+
+    print(order_string1)
 
     order1 = [locals()["axe_batch1_0"]]
     for k in order_string1:
@@ -369,35 +341,30 @@ def conv2d_ttile_2kernel(name, batch_size, width, height, kernel_w, kernel_h, in
     s[Out1].reorder(*order1)
     s[Out2].reorder(*order2)
 
-    # print(tvm.lower(s, [A, W, Out], simple_mode=True))
+    print(tvm.lower(s, [A, W, Out], simple_mode=True))
 
     fuse_loop1 = []
     fuse_loop2 = []
 
-    if info_tile[1]["nb_loop_no_tensorize"] == 0:
-        return s, [A, W, Out]
-    else:
-        fuse_loop1 += [order1[k] for k in range(1, info_tile[1]["nb_loop_no_tensorize"]+1 )]
-
-    if info_tile[2]["nb_loop_no_tensorize"] == 0:
-        return s, [A, W, Out]
-    else:
-        fuse_loop2 += [order2[k] for k in range(1, info_tile[2]["nb_loop_no_tensorize"]+1)]
-
-    # print(tvm.lower(s, [A, W, Out], simple_mode=True))
-
-    fuse_loop1 = s[Out1].fuse(*fuse_loop1)
-    fuse_loop2 = s[Out2].fuse(*fuse_loop2)
+    for k in info_tile[1]["fuse"]:
+        fuse_loop1 += [locals()[k]]
+    for k in info_tile[2]["fuse"]:
+        fuse_loop2 += [locals()[k]]
 
 
-    s[Out1].parallel(fuse_loop1)
-    s[Out2].parallel(fuse_loop2)
+    # # print(tvm.lower(s, [A, W, Out], simple_mode=True))
+
+    # fuse_loop1 = s[Out1].fuse(*fuse_loop1)
+    # fuse_loop2 = s[Out2].fuse(*fuse_loop2)
+
+
+    # s[Out1].parallel(fuse_loop1)
+    # s[Out2].parallel(fuse_loop2)
 
     # print(tvm.lower(s, [A, W, Out], simple_mode=True))
 
-
-    conv1 = intrin_conv("gen_conv1", kernel_h, kernel_w, locals()["factor_in_channels1_0"], locals()["factor_out_channels1_0"], locals()["factor_xx1_0"], locals()["factor_yy1_0"])
-    conv2 = intrin_conv("gen_conv2", kernel_h, kernel_w, locals()["factor_in_channels2_0"], locals()["factor_out_channels2_0"], locals()["factor_xx2_0"], locals()["factor_yy2_0"])
+    conv1 = intrin_conv("gen_conv1", info_tile[1]["w_t"], info_tile[1]["h_t"], info_tile[1]["c_t"], info_tile[1]["f_t"], info_tile[1]["x_t"], info_tile[1]["y_t"])
+    conv2 = intrin_conv("gen_conv2", info_tile[2]["w_t"], info_tile[2]["h_t"], info_tile[2]["c_t"], info_tile[2]["f_t"], info_tile[2]["x_t"], info_tile[2]["y_t"])
 
     s[Out1].tensorize(locals()[info_tile[1]["axe_to_tensorize"]], conv1)
     s[Out1].pragma(locals()["axe_batch1_0"], "import_llvm", conv_impl(name, len(info_tile)))
@@ -413,6 +380,11 @@ if __name__ == '__main__':
 
     name_conv = sys.argv[1]
     archi = sys.argv[2]
+
+    # os.system(f"""(cd ~/matmul_bench && python3 create.py {name_conv} {archi})""")
+    # os.system("(cd ~/matmul_bench/ml_utils && dune exec ./stephane_search.exe)")
+    # os.system("cp ~/matmul_bench/c_bench/gen/gen_conv.c ~/tvm_ttile/ttile/tensorize/tensorize_ttile/c_files/" + name_conv + ".c")
+
 
     out_channels, in_channels, height, width, kernel_h, kernel_w, stride_h, stride_w = input_conv.input_conv[name_conv]
     batch_size = 1
@@ -477,3 +449,4 @@ if __name__ == '__main__':
 
 
     tvm.testing.assert_allclose(tensorize_result, output_conv2d_test, rtol=1e-5)
+
