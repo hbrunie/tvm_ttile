@@ -392,7 +392,7 @@ def parser(name):
             "factor_in_channels": factor("c", structure1, level1),
             "order": order(structure1),
             "nb_loop_no_tensorize": level1 - 1,
-            "axe_to_tensorize": order(structure1)[level1 - 1]
+            "axe_to_tensorize": order(structure1, level1 + 1)[level1 - 1]
         }
 
     else:
