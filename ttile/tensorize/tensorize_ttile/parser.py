@@ -97,6 +97,92 @@ typedef float M_TYPE;
 
     return level_
 
+
+def write_c_file_special_case(name, header, old_file, info, level_):
+
+    for u in info:
+        print("labas", u)
+
+    """
+    Function which write the C files for tensorize
+    """
+
+    f = open(name, "w")
+    f.write("""
+#include <immintrin.h>
+typedef int IND_TYPE;
+typedef float M_TYPE;
+    """)
+    for k in range(header):
+        if ") {" in old_file[k]:
+            f.write(old_file[k].replace(") {", ", int strideO1, int strideO2, int strideA1, int strideA2, int strideW1, int strideW2, int strideW3) {"))
+        elif "#include" in old_file[k] or "assert" in old_file[k]:
+            continue
+        elif "gen_conv" in old_file[k]:
+            new_name_fct = "gen_conv"
+            f.write(old_file[k].replace("gen_conv", new_name_fct))
+        else:
+            f.write(old_file[k])
+
+    # we need to init value of delete loop
+    for i in range(level_):
+        if info[i][0] == 'for':
+            for j in range(len(info[i][4][0])):
+                f.write(info[i][4][0][j].replace(" ", "") + " = 0;\n")
+
+    # begin and end of line to write
+    begin = info[level_][1]
+    end = info[level_][2]
+
+    for k in range(begin, end + 1):
+        f.write(old_file[k])
+
+    f.write("}\n") # for the main
+
+    f.close()
+
+
+    # To avoid pb with no divisible tile
+    new_structure = []
+    first_y = True
+    first_y_split = True
+    split_total = 0
+    level = 1
+    id_y = 0
+
+    for k in range(len(info)):
+        if info[k][0] == 'for':
+            if "y" in info[k][4][0][0]:
+                if first_y:
+                    new_structure += [info[k]]
+                    first_y = False
+                    level += 1
+                else:
+                    if first_y_split:
+                        new_structure += [info[k]]
+                        id_y = k
+                        level += 1
+                        first_y_split = False
+                    else:
+                        end_loop = info[k][2]
+                        end_iteration = info[k][4][2]
+                        
+                        info[id_y][2] = end_loop
+                        info[id_y][4][2] = end_iteration
+                        info[id_y][4][3] = end_iteration
+
+            else:
+                if level == info[k][3]:
+                    new_structure += [info[k]]
+                level += 1
+
+        else:
+            new_structure += [info[k]]
+
+
+
+    return level_, new_structure
+
 def replace(f, x, y):
     """
     Function to replace all element x by y in the list f
@@ -125,6 +211,9 @@ def factor(variable, structure, level_max, split = False):
     return f
 
 def find_size_tensorize(variable, lorder, level, factors, height_y):
+    """
+    Find the size of variable inside the tensorize function
+    """
     letter = variable
     if len(factors) == 0:
         if variable == "y":
@@ -245,10 +334,7 @@ def compute_structure(f):
                 structure[id][2] = k
         return structure
 
-    # TODO change that
     s_ = compute_structure_(f)
-    # f, s_ = delete_useless_loop(f, s_)
-    # s_ = compute_structure_(f)
 
     # I search the number of loop level i.e. if I need to have one or two files
     number_of_level = [0 for k in range(20)]
@@ -261,6 +347,12 @@ def compute_structure(f):
         # that mean we do not have 2 levels
         return 1, f, s_, None, None
 
+    #special case when Y is tile and after split in two
+    for k in range(index_dedoublement):
+        if s_[k][0] == "for":
+            if "y" in s_[k][4][0][0]:
+                return 3, f, s_, index_dedoublement, None
+
     # This part we have two files
     x, y = find_loop_to_delete(s_, index_dedoublement)
     f2 = delete_loop(f.copy(), s_[x][1], s_[x][2])
@@ -272,6 +364,9 @@ def compute_structure(f):
     return 2, f1, structure1, f2, structure2
 
 def find_fuse(structure, level, order):
+    """
+    Function to find the fuse
+    """
     fuse = []
     for k in range(level - 1):
         begin = structure[k + 1][4][1]
@@ -395,8 +490,8 @@ def parser(name):
 
     for t in structure1:
         print(t)
-    for t in structure2:
-        print(t)
+    # for t in structure2:
+    #     print(t)
 
     print(info_order)
 
@@ -426,7 +521,7 @@ def parser(name):
             "fuse": find_fuse(structure1, level1, order1),
         }
 
-    else:
+    elif number_of_file == 2:
 
         level1 = write_c_file("tensorize_files/" + name + "1.c", structure1[1][1], f1, structure1, "1")
         out_h1 = factor("height", structure1, level1, True)
@@ -475,8 +570,44 @@ def parser(name):
             "y_t": find_size_tensorize("y", order2, level2, factor("y", structure2, level2, True), height2), 
             "fuse": find_fuse(structure2, level2, order2),
         }
+
+    # special case when y is tile and after split
+    else:
+        index_dedoublement = f2
+        level_to_tensorize = index_dedoublement - 1 
+
+        level1, structure1 = write_c_file_special_case("tensorize_files/" + name + ".c", structure1[1][1], f1, structure1, level_to_tensorize)
+
+        for u in structure1:
+            print("la", u)
+        # information for tensorize i.e. factor of tilling
+        info_tensorize = {}
+
+        order1 = order(info_order)
+        height1 = size["y"] 
+
+        level1 -= 1
+        info_tensorize[1] = {
+            "factor_out_channels": factor("f", structure1, level1),
+            "factor_xx": factor("x", structure1, level1),
+            "factor_yy": factor("y", structure1, level1),
+            "factor_in_channels": factor("c", structure1, level1),
+            "order": order1,
+            "nb_loop_no_tensorize": level1 ,
+            "axe_to_tensorize": order1[level1 ],
+            "h_t": find_size_tensorize("h", order1, level1, [], height1), 
+            "w_t": find_size_tensorize("w", order1, level1, [], height1), 
+            "f_t": find_size_tensorize("f", order1, level1, factor("f", structure1, level1), height1), 
+            "c_t": find_size_tensorize("c", order1, level1, factor("c", structure1, level1), height1), 
+            "x_t": find_size_tensorize("x", order1, level1, factor("x", structure1, level1), height1), 
+            "y_t": find_size_tensorize("y", order1, level1, factor("y", structure1, level1), height1), 
+            "fuse": find_fuse(structure1, level1, order1),
+        }
+
+
+
     print("####")
-    for i in [1,2]:
+    for i in [1]:
         for key in info_tensorize[i]:
             print(key, info_tensorize[i][key])
     print("####")
