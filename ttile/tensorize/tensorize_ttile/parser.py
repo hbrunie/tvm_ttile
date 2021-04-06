@@ -313,7 +313,6 @@ def order(o, suffix=""):
 
     return order
 
-
 def parser(name):
 
     """
@@ -396,8 +395,8 @@ def parser(name):
 
     for t in structure1:
         print(t)
-    # for t in structure2:
-    #     print(t)
+    for t in structure2:
+        print(t)
 
     print(info_order)
 
@@ -477,7 +476,7 @@ def parser(name):
             "fuse": find_fuse(structure2, level2, order2),
         }
     print("####")
-    for i in [1]:
+    for i in [1,2]:
         for key in info_tensorize[i]:
             print(key, info_tensorize[i][key])
     print("####")

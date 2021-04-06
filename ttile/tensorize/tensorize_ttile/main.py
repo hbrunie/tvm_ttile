@@ -275,7 +275,7 @@ def conv2d_ttile_2kernel(name, batch_size, width, height, kernel_w, kernel_h, in
 
     @tvm.te.hybrid.script
     def assign_output(c1, c2):
-        c = output_tensor((c1.shape[0], width, height, c1.shape[3]), 'float32')
+        c = output_tensor((c1.shape[0], out_w, out_h, c1.shape[3]), 'float32')
         for x in range(c1.shape[0]):
             for y in range(c1.shape[1]):
                 for z in range(c1.shape[2]):
@@ -424,8 +424,8 @@ if __name__ == '__main__':
 
     # a = tvm.nd.array(np.ones((batch_size, width + kernel_w - 1, height + kernel_h - 1, in_channels), dtype="float32"), ctx)
     # w = tvm.nd.array(np.ones((kernel_w, kernel_h, in_channels, out_channels), dtype="float32"), ctx)
-    o = tvm.nd.array(np.zeros((batch_size, width, height, out_channels), dtype=dtype), ctx)
-    oo = tvm.nd.array(np.zeros((batch_size, width, height, out_channels), dtype=dtype), ctx)
+    o = tvm.nd.array(np.zeros((batch_size, width // stride_h, height // stride_h, out_channels), dtype=dtype), ctx)
+    oo = tvm.nd.array(np.zeros((batch_size, width // stride_h, height // stride_h, out_channels), dtype=dtype), ctx)
 
     func(a, w, o)
 
