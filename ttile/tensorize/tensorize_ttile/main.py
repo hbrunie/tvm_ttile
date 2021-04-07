@@ -349,25 +349,40 @@ def conv2d_ttile_2kernel(name, batch_size, width, height, kernel_w, kernel_h, in
 
     # print(tvm.lower(s, [A, W, Out], simple_mode=True))
 
-    fuse_loop1 = []
-    fuse_loop2 = []
+    fuse1 = info_tile[1]["fuse"]
+    fuse2 = info_tile[2]["fuse"]
 
-    for k in info_tile[1]["fuse"]:
-        fuse_loop1 += [locals()[k]]
-    for k in info_tile[2]["fuse"]:
-        fuse_loop2 += [locals()[k]]
+    try:
+        fuse_loop1 = s[Out1].fuse(locals()[fuse1[0]], locals()[fuse1[1]])
+        for k in range(2, len(fuse1)):
+            try: 
+                fuse_loop1 = s[Out1].fuse(fuse_loop1, locals()[fuse1[k]])
+            except:
+                continue
+    except:
+        fuse_loop1 = locals()[fuse1[0]]
+
+    try:
+        fuse_loop2 = s[Out2].fuse(locals()[fuse2[0]], locals()[fuse2[1]])
+        for k in range(2, len(fuse2)):
+            try: 
+                fuse_loop1 = s[Out1].fuse(fuse_loop2, locals()[fuse2[k]])
+            except:
+                continue
+    except:
+        fuse_loop2= locals()[fuse2[0]]
 
 
-    print(tvm.lower(s, [A, W, Out], simple_mode=True))
+    # print(tvm.lower(s, [A, W, Out], simple_mode=True))
 
     # fuse_loop1 = s[Out1].fuse(*fuse_loop1)
     # fuse_loop2 = s[Out2].fuse(*fuse_loop2)
 
 
-    # s[Out1].parallel(fuse_loop1)
-    # s[Out2].parallel(fuse_loop2)
+    s[Out1].parallel(fuse_loop1)
+    s[Out2].parallel(fuse_loop2)
 
-    # print(tvm.lower(s, [A, W, Out], simple_mode=True))
+    print(tvm.lower(s, [A, W, Out], simple_mode=True))
 
     conv1 = intrin_conv("gen_conv1", info_tile[1]["w_t"], info_tile[1]["h_t"], info_tile[1]["c_t"], info_tile[1]["f_t"], info_tile[1]["x_t"], info_tile[1]["y_t"])
     conv2 = intrin_conv("gen_conv2", info_tile[2]["w_t"], info_tile[2]["h_t"], info_tile[2]["c_t"], info_tile[2]["f_t"], info_tile[2]["x_t"], info_tile[2]["y_t"])
@@ -406,7 +421,7 @@ if __name__ == '__main__':
     ctx = tvm.context(target)
     dtype = "float32"
 
-    info_tile = parser.parser(name_conv)
+    info_tile = parser.parser(name_conv, stride_h)
 
     if len(info_tile) == 1:
         s, I = conv2d_ttile_1kernel(name_conv, batch_size, width, height, kernel_w, kernel_h, in_channels, out_channels, info_tile)
