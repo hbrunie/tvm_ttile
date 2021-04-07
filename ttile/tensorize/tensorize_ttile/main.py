@@ -418,9 +418,9 @@ if __name__ == '__main__':
 
     for runs in range(nb_runs):
 
-        # os.system(f"""(cd ~/matmul_bench && python3 create.py {name_conv} {archi})""")
-        # os.system("(cd ~/matmul_bench/ml_utils && dune exec ./stephane_search.exe)")
-        # os.system("cp ~/matmul_bench/c_bench/gen/gen_conv.c ~/tvm_ttile/ttile/tensorize/tensorize_ttile/c_files/" + name_conv + ".c")
+        os.system(f"""(cd ~/matmul_bench && python3 create.py {name_conv} {archi})""")
+        os.system("(cd ~/matmul_bench/ml_utils && dune exec ./stephane_search.exe)")
+        os.system("cp ~/matmul_bench/c_bench/gen/gen_conv.c ~/tvm_ttile/ttile/tensorize/tensorize_ttile/c_files/" + name_conv + ".c")
 
 
         out_channels, in_channels, height, width, kernel_h, kernel_w, stride_h, stride_w = input_conv.input_conv[name_conv]
