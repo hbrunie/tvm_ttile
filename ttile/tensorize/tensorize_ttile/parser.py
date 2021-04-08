@@ -224,8 +224,8 @@ def find_size_tensorize(variable, lorder, level, factors, height_y):
         "c": "axe_in_channels",
         "x": "axe_xx",
         "y": "axe_yy",
-        "w": "axe_kernel_w",
-        "h": "axe_kernel_h"
+        "w": "axe_w",
+        "h": "axe_h"
     }
     variable = convert[variable]
     id = 0
@@ -397,8 +397,8 @@ def order(o, suffix=""):
         "c": "axe_in_channels" + suffix,
         "x": "axe_xx" + suffix,
         "y": "axe_yy" + suffix,
-        "w": "axe_kernel_w" + suffix,
-        "h": "axe_kernel_h" + suffix
+        "w": "axe_w" + suffix,
+        "h": "axe_h" + suffix
     }
     number = {
         "f": 0,
