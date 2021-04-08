@@ -8,8 +8,8 @@ M_TYPE const * const __restrict__ input, M_TYPE const * const __restrict__ param
     IND_TYPE Y, IND_TYPE H,
 	IND_TYPE C, IND_TYPE F, int strideO1, int strideO2, int strideA1, int strideA2, int strideW1, int strideW2, int strideW3) {
 /*
-[V f; U (4, f); U (7, y); T (8, c); Hoist_vars [c]; T (14, x); T (3, w);
-  T (3, h); T (4, f); T (4, c); T (1, x); T (2, y); T (2, f); T (16, c)]
+[V f; U (4, f); U (7, y); T (8, c); Hoist_vars [c]; T (7, x); T (3, w);
+  T (3, h); T (1, f); T (4, c); T (2, x); T (2, y); T (8, f); T (16, c)]
 */
 IND_TYPE c, c0, cp_0, c0_p_0, c1_p_0, c1, cp_1, c0_p_1, cp_2, f, f0, fp_0, f0_p_0, fp_1, h, hp_0, w, wp_0, x, x0, xp_0, x0_p_0, xp_1, y, yp_0;
 IND_TYPE y0 = 0;
@@ -35,12 +35,12 @@ c0_p_1 = 0;
 f = 0;
 fp_1 = 0;
 						for (h = h0, hp_0 = 0;h < h0 + 3;h += 1, hp_0 += 1){
-							// y = 7, x = 14, h = 1, w = 3, c = 8, f = 64
+							// y = 7, x = 7, h = 1, w = 3, c = 8, f = 64
 							// T (w, 3) (3 / 1)
 							for (w = w0, wp_0 = 0;w < w0 + 3;w += 1, wp_0 += 1){
-								// y = 7, x = 14, h = 1, w = 1, c = 8, f = 64
-								// T (x, 14) (14 / 1)
-								for (x = x0, xp_1 = x0_p_0, xp_0 = 0;x < x0 + 14;x += 1, xp_1 += 1, xp_0 += 1){
+								// y = 7, x = 7, h = 1, w = 1, c = 8, f = 64
+								// T (x, 7) (7 / 1)
+								for (x = x0, xp_1 = x0_p_0, xp_0 = 0;x < x0 + 7;x += 1, xp_1 += 1, xp_0 += 1){
 											mem_vec_0 = _mm512_loadu_ps(&output[strideO1 * x + strideO2 * y + f]);
 											mem_vec_1 = _mm512_loadu_ps(&output[strideO1 * x + strideO2 * y + f + 16]);
 											mem_vec_2 = _mm512_loadu_ps(&output[strideO1 * x + strideO2 * y + f + 32]);
