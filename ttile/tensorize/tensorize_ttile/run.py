@@ -417,7 +417,6 @@ if __name__ == '__main__':
 
     name_conv = sys.argv[1]
     archi = sys.argv[2]
-    nb_runs = int(sys.argv[3])
 
     for runs in range(200):
 
