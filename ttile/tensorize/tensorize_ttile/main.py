@@ -189,7 +189,7 @@ def conv2d_ttile_1kernel(name, batch_size, width, height, kernel_w, kernel_h, in
     
 
     locals()["axe_batch_0"], locals()["axe_xx_0"], locals()["axe_yy_0"], locals()["axe_out_channels_0"] = Out.op.axis
-    locals()["axe_in_channels_0"], locals()["axe_kernel_h_0"], locals()["axe_kernel_w_0"] = Out.op.reduce_axis
+    locals()["axe_in_channels_0"], locals()["axe_h_0"], locals()["axe_w_0"] = Out.op.reduce_axis
 
 
     for id_conv in [1]:
@@ -310,10 +310,10 @@ def conv2d_ttile_2kernel(name, batch_size, width, height, kernel_w, kernel_h, in
     s[Out].vectorize(out_f2)
 
     locals()["axe_batch1_0"], locals()["axe_xx1_0"], locals()["axe_yy1_0"], locals()["axe_out_channels1_0"] = Out1.op.axis
-    locals()["axe_in_channels1_0"], locals()["axe_kernel_h1_0"], locals()["axe_kernel_w1_0"] = Out1.op.reduce_axis
+    locals()["axe_in_channels1_0"], locals()["axe_h1_0"], locals()["axe_w1_0"] = Out1.op.reduce_axis
 
     locals()["axe_batch2_0"], locals()["axe_xx2_0"], locals()["axe_yy2_0"], locals()["axe_out_channels2_0"] = Out2.op.axis
-    locals()["axe_in_channels2_0"], locals()["axe_kernel_h2_0"], locals()["axe_kernel_w2_0"] = Out2.op.reduce_axis
+    locals()["axe_in_channels2_0"], locals()["axe_h2_0"], locals()["axe_w2_0"] = Out2.op.reduce_axis
 
     for id_conv in [1, 2]:
         for factor in ["factor_out_channels", "factor_yy", "factor_xx", "factor_in_channels", "factor_h", "factor_w"]:
