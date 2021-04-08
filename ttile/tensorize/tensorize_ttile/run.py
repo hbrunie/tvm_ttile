@@ -9,6 +9,9 @@ import parser
 import sys
 import os
 
+HOME = "/root"
+# HOME = "/hst"
+
 def generate_ttile_conv2d(name_file, number_of_file):
 
     cc_code_begin = """
@@ -106,6 +109,9 @@ def intrin_conv(name_function, W, H, C, F, X, Y, stride_w, stride_h):
     Ww = tvm.tir.decl_buffer(w.shape, w.dtype, name="W", offset_factor=1, strides=[strideB1, strideB2, strideB3, 1])
     Oo = tvm.tir.decl_buffer(o.shape, o.dtype, name="O", offset_factor=1, strides=[strideC1, strideC2, strideC3, 1])
 
+    # print("a", a.shape)
+    # print("w", w.shape)
+    # print("o", o.shape)
 
     def intrin_func(ins, outs):
         aa, ww = ins
@@ -212,7 +218,7 @@ def conv2d_ttile_1kernel(name, batch_size, width, height, kernel_w, kernel_h, in
 
     # print(tvm.lower(s, [A, W, Out], simple_mode=True))
 
-    fuse1 =  ['axe_out_channels_1', 'axe_yy_0', 'axe_out_channels_2']
+    fuse1 = info_tile[1]["fuse"]
 
     try:
         fuse_loop1 = s[Out].fuse(locals()[fuse1[0]], locals()[fuse1[1]])
@@ -226,15 +232,11 @@ def conv2d_ttile_1kernel(name, batch_size, width, height, kernel_w, kernel_h, in
 
     s[Out].parallel(fuse_loop1)
 
-
     conv1 = intrin_conv("gen_conv", info_tile[1]["w_t"], info_tile[1]["h_t"], info_tile[1]["c_t"], info_tile[1]["f_t"], info_tile[1]["x_t"], info_tile[1]["y_t"], stride_w, stride_h)
 
+    s[Out].tensorize(locals()[info_tile[1]["axe_to_tensorize"]], conv1)
+    s[Out].pragma(locals()["axe_batch_0"], "import_llvm", conv_impl(name, len(info_tile)))
 
-    # s[Out].tensorize(locals()[info_tile[1]["axe_to_tensorize"]], conv1)
-    # s[Out].pragma(locals()["axe_batch_0"], "import_llvm", conv_impl(name, len(info_tile)))
-
-
-    # print(tvm.lower(s, [A, W, Out], simple_mode=True))
 
     return s, [A, W, Out]
 
@@ -259,6 +261,7 @@ def conv2d_ttile_2kernel(name, batch_size, width, height, kernel_w, kernel_h, in
     out_h2 = info_tile[2]["height"]
 
 
+    # print(out_h, out_w, out_h1, out_h2)
     size_h1 = info_tile[1]["height"] 
     size_h2 = info_tile[2]["height"] 
 
@@ -293,6 +296,9 @@ def conv2d_ttile_2kernel(name, batch_size, width, height, kernel_w, kernel_h, in
 
     Out = assign_output(Out1, Out2)
 
+    # print("A", A.shape)
+    # print("W", W.shape)
+    # print("O", Out.shape)
 
     s = te.create_schedule(Out.op)
 
@@ -323,7 +329,7 @@ def conv2d_ttile_2kernel(name, batch_size, width, height, kernel_w, kernel_h, in
                 locals()[axe0], locals()[axe1] = s[Out1].split(locals()[axe0], factor = locals()["factor_" + name_axe + str(id_conv) + "_" + str(nb_factor)])
 
     for id_conv in [2]:
-        for name_axe in ["out_channels", "xx", "yy", "in_channels",  "h", "w"]:
+        for name_axe in ["out_channels", "xx", "yy", "in_channels", "h", "w"]:
             factor = "factor_" + name_axe
             for nb_factor in range(len(info_tile[id_conv][factor])):
                 axe0 = "axe_" + name_axe + str(id_conv) + "_" + str(nb_factor)
@@ -335,6 +341,8 @@ def conv2d_ttile_2kernel(name, batch_size, width, height, kernel_w, kernel_h, in
 
     order_string1 = info_tile[1]["order"]
     order_string2 = info_tile[2]["order"]
+
+    # print(order_string1)
 
     order1 = [locals()["axe_batch1_0"]]
     for k in order_string1:
@@ -377,16 +385,6 @@ def conv2d_ttile_2kernel(name, batch_size, width, height, kernel_w, kernel_h, in
     s[Out1].parallel(fuse_loop1)
     s[Out2].parallel(fuse_loop2)
 
-
-
-    # fuse_loop1 = s[Out1].fuse(*fuse_loop1)
-    # fuse_loop2 = s[Out2].fuse(*fuse_loop2)
-
-
-    
-
-    # print(tvm.lower(s, [A, W, Out], simple_mode=True))
-
     conv1 = intrin_conv("gen_conv1", info_tile[1]["w_t"], info_tile[1]["h_t"], info_tile[1]["c_t"], info_tile[1]["f_t"], info_tile[1]["x_t"], info_tile[1]["y_t"], stride_w, stride_h)
     conv2 = intrin_conv("gen_conv2", info_tile[2]["w_t"], info_tile[2]["h_t"], info_tile[2]["c_t"], info_tile[2]["f_t"], info_tile[2]["x_t"], info_tile[2]["y_t"], stride_w, stride_h)
 
@@ -402,50 +400,71 @@ def conv2d_ttile_2kernel(name, batch_size, width, height, kernel_w, kernel_h, in
 
 if __name__ == '__main__':
 
+    try:
+        os.mkdir("old_c_files")
+    except FileExistsError:
+        pass
+
+    try:
+        os.mkdir("c_files")
+    except FileExistsError:
+        pass
+
+    try:
+        os.mkdir("tensorize_files")
+    except FileExistsError:
+        pass
+
     name_conv = sys.argv[1]
     archi = sys.argv[2]
+    nb_runs = int(sys.argv[3])
 
-    out_channels, in_channels, height, width, kernel_h, kernel_w, stride_h, stride_w = input_conv.input_conv[name_conv]
-    batch_size = 1
+    for runs in range(200):
 
-    if archi == "avx2":
-        target = "llvm -mcpu=core-avx2"
-        option_compilation = ["-mavx2", "-mfma"]#, "-O3"]
-    else:
+
+
+        out_channels, in_channels, height, width, kernel_h, kernel_w, stride_h, stride_w = input_conv.input_conv[name_conv]
+        batch_size = 1
+
+        #if archi == "avx2":
+        #    target = "llvm -mcpu=core-avx2"
+        #    option_compilation = ["-mavx2", "-mfma"]#, "-O3"]
+        #else:
         target = "llvm -mcpu=skylake-avx512"
         option_compilation = ["-mavx512f", "-mfma"]#, "-O3"]
 
-    log_file = "autotvm_conv2d.log"
-    ctx = tvm.context(target)
-    dtype = "float32"
+        log_file = "autotvm_conv2d.log"
+        ctx = tvm.context(target)
+        dtype = "float32"
 
-    info_tile = parser.parser(name_conv)
+        info_tile = parser.parser(name_conv)
 
-    if len(info_tile) == 1:
-        s, I = conv2d_ttile_1kernel(name_conv, batch_size, width, height, kernel_w, kernel_h, in_channels, out_channels, info_tile, stride_w, stride_h)
-        A, W, Out = I
-    else:
-        s, I = conv2d_ttile_2kernel(name_conv, batch_size, width, height, kernel_w, kernel_h, in_channels, out_channels, info_tile, stride_w, stride_h)
-        A, W, Out = I
+        if len(info_tile) == 1:
+            s, I = conv2d_ttile_1kernel(name_conv, batch_size, width, height, kernel_w, kernel_h, in_channels, out_channels, info_tile, stride_w, stride_h)
+            A, W, Out = I
+        else:
+            s, I = conv2d_ttile_2kernel(name_conv, batch_size, width, height, kernel_w, kernel_h, in_channels, out_channels, info_tile, stride_w, stride_h)
+            A, W, Out = I
 
-    func = tvm.build(s, [A, W, Out], target=target, name="conv")
+        func = tvm.build(s, [A, W, Out], target=target, name="conv")
 
 
 
-    a = tvm.nd.array(np.random.uniform(size=(batch_size, width + kernel_w - 1, height + kernel_h - 1, in_channels)).astype(A.dtype), ctx)
-    w = tvm.nd.array(np.random.uniform(size=(kernel_w, kernel_h, in_channels, out_channels)).astype(W.dtype), ctx)
+        a = tvm.nd.array(np.random.uniform(size=(batch_size, width + kernel_w - 1, height + kernel_h - 1, in_channels)).astype(A.dtype), ctx)
+        w = tvm.nd.array(np.random.uniform(size=(kernel_w, kernel_h, in_channels, out_channels)).astype(W.dtype), ctx)
 
-    # a = tvm.nd.array(np.ones((batch_size, width + kernel_w - 1, height + kernel_h - 1, in_channels), dtype="float32"), ctx)
-    # w = tvm.nd.array(np.ones((kernel_w, kernel_h, in_channels, out_channels), dtype="float32"), ctx)
-    o = tvm.nd.array(np.zeros((batch_size, width // stride_h, height // stride_h, out_channels), dtype=dtype), ctx)
-    oo = tvm.nd.array(np.zeros((batch_size, width // stride_h, height // stride_h, out_channels), dtype=dtype), ctx)
+        # a = tvm.nd.array(np.ones((batch_size, width + kernel_w - 1, height + kernel_h - 1, in_channels), dtype="float32"), ctx)
+        # w = tvm.nd.array(np.ones((kernel_w, kernel_h, in_channels, out_channels), dtype="float32"), ctx)
+        o = tvm.nd.array(np.zeros((batch_size, width // stride_h, height // stride_h, out_channels), dtype=dtype), ctx)
+        oo = tvm.nd.array(np.zeros((batch_size, width // stride_h, height // stride_h, out_channels), dtype=dtype), ctx)
 
-    func(a, w, o)
+        func(a, w, o)
 
-    tensorize_result = o.asnumpy()
+        tensorize_result = o.asnumpy()
 
-    # evaluate
-    evaluator = func.time_evaluator(func.entry_name, ctx, number=3, repeat=10)
-    print(evaluator(a, w, o).mean * 1e3)
+        # evaluate
+        evaluator = func.time_evaluator(func.entry_name, ctx, number=3, repeat=10)
+        # print("My Convolution with tensorize: %f ms" % (evaluator(a, w, o).mean * 1e3))
 
+        print(evaluator(a, w, o).mean * 1e3)
 
