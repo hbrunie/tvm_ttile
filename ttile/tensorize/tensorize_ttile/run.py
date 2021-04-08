@@ -418,7 +418,7 @@ if __name__ == '__main__':
     name_conv = sys.argv[1]
     archi = sys.argv[2]
 
-    for runs in range(200):
+    for runs in range(1):
 
 
 

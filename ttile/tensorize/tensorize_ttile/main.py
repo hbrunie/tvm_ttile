@@ -425,8 +425,8 @@ if __name__ == '__main__':
         os.system(f"""(cd {HOME}/matmul_bench/ml_utils && dune exec ./stephane_search.exe)""")
         os.system(f"""cp {HOME}/matmul_bench/c_bench/gen/gen_conv.c {HOME}/tvm_ttile/ttile/tensorize/tensorize_ttile/c_files/{name_conv}.c""")
 
-        #try:
-        if True:
+        try:
+        #if True:
 
             out_channels, in_channels, height, width, kernel_h, kernel_w, stride_h, stride_w = input_conv.input_conv[name_conv]
             batch_size = 1
@@ -489,6 +489,7 @@ if __name__ == '__main__':
             output_conv2d_test = oo.asnumpy()
 
             tvm.testing.assert_allclose(tensorize_result, output_conv2d_test, rtol=1e-5)
+            print(results)
 
             for k in range(19):
                 results += [float(os.popen("python3 run.py " + name_conv + " " + archi).read())]
@@ -512,8 +513,8 @@ if __name__ == '__main__':
                 os.system("cp tensorize_files/" + name_conv + "1.c old_c_files/" + name_conv + "1_tensorize__" + str(runs) + ".c" )
                 os.system("cp tensorize_files/" + name_conv + "2.c old_c_files/" + name_conv + "2_tensorize__" + str(runs) + ".c" )
 
-        #except:
-        else:
+        except:
+        #else:
             tt = open("faux.csv", "a")
             tt.write(name_conv + " " + str(runs) + "\n")
             tt.close()
