@@ -426,16 +426,15 @@ if __name__ == '__main__':
         os.system(f"""cp {HOME}/matmul_bench/c_bench/gen/gen_conv.c {HOME}/tvm_ttile/ttile/tensorize/tensorize_ttile/c_files/{name_conv}.c""")
 
         try:
-        #if True:
 
             out_channels, in_channels, height, width, kernel_h, kernel_w, stride_h, stride_w = input_conv.input_conv[name_conv]
             batch_size = 1
 
-            #if archi == "avx2":
-            #    target = "llvm -mcpu=core-avx2"
-            #    option_compilation = ["-mavx2", "-mfma"]#, "-O3"]
-            #else:
-            target = "llvm -mcpu=skylake-avx512"
+            if archi == "avx2":
+                target = "llvm -mcpu=core-avx2"
+                option_compilation = ["-mavx2", "-mfma"]#, "-O3"]
+            else:
+                target = "llvm -mcpu=skylake-avx512"
             option_compilation = ["-mavx512f", "-mfma"]#, "-O3"]
 
             log_file = "autotvm_conv2d.log"
@@ -458,8 +457,6 @@ if __name__ == '__main__':
             a = tvm.nd.array(np.random.uniform(size=(batch_size, width + kernel_w - 1, height + kernel_h - 1, in_channels)).astype(A.dtype), ctx)
             w = tvm.nd.array(np.random.uniform(size=(kernel_w, kernel_h, in_channels, out_channels)).astype(W.dtype), ctx)
 
-            # a = tvm.nd.array(np.ones((batch_size, width + kernel_w - 1, height + kernel_h - 1, in_channels), dtype="float32"), ctx)
-            # w = tvm.nd.array(np.ones((kernel_w, kernel_h, in_channels, out_channels), dtype="float32"), ctx)
             o = tvm.nd.array(np.zeros((batch_size, width // stride_h, height // stride_h, out_channels), dtype=dtype), ctx)
             oo = tvm.nd.array(np.zeros((batch_size, width // stride_h, height // stride_h, out_channels), dtype=dtype), ctx)
 
