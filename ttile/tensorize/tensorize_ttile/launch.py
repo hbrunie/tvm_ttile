@@ -1,11 +1,10 @@
 import os
 import input_conv
 
-archi = "avx2"
-# archi = "avx512"
+#archi = "avx2"
+archi = "avx512"
 
-nb_runs = 2
+nb_runs = 200
 
 for key in input_conv.input_conv:
-    if input_conv.input_conv[key][-1] == 1: # stride = 1
-        os.system("python3.8 main.py " + key + " " + archi + " " + str(nb_runs))
+    os.system("python3 main.py " + key + " " + archi + " " + str(nb_runs))

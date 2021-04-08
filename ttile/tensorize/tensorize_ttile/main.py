@@ -9,7 +9,7 @@ import parser
 import sys
 import os
 
-HOME = "/home/colo"
+HOME = "/root"
 # HOME = "/hst"
 
 def generate_ttile_conv2d(name_file, number_of_file):
@@ -419,7 +419,7 @@ if __name__ == '__main__':
     archi = sys.argv[2]
     nb_runs = int(sys.argv[3])
 
-    for runs in range(nb_runs):
+    for runs in range(200):
 
         os.system(f"""(cd {HOME}/matmul_bench && python3 create.py {name_conv} {archi})""")
         os.system(f"""(cd {HOME}/matmul_bench/ml_utils && dune exec ./stephane_search.exe)""")
@@ -429,12 +429,12 @@ if __name__ == '__main__':
         out_channels, in_channels, height, width, kernel_h, kernel_w, stride_h, stride_w = input_conv.input_conv[name_conv]
         batch_size = 1
 
-        if archi == "avx2":
-            target = "llvm -mcpu=core-avx2"
-            option_compilation = ["-mavx2", "-mfma"]#, "-O3"]
-        else:
-            target = "llvm -mcpu=skylake-avx512"
-            option_compilation = ["-mavx512f", "-mfma"]#, "-O3"]
+        #if archi == "avx2":
+        #    target = "llvm -mcpu=core-avx2"
+        #    option_compilation = ["-mavx2", "-mfma"]#, "-O3"]
+        #else:
+        target = "llvm -mcpu=skylake-avx512"
+        option_compilation = ["-mavx512f", "-mfma"]#, "-O3"]
 
         log_file = "autotvm_conv2d.log"
         ctx = tvm.context(target)
@@ -489,7 +489,7 @@ if __name__ == '__main__':
         tvm.testing.assert_allclose(tensorize_result, output_conv2d_test, rtol=1e-5)
 
         for k in range(19):
-            results += [float(os.popen("python3.8 run.py " + name_conv + " " + archi).read())]
+            results += [float(os.popen("python3 run.py " + name_conv + " " + archi).read())]
 
         for k in range(5):
             results.remove(max(results))
