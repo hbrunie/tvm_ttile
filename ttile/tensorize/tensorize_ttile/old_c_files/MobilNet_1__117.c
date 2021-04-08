@@ -7,9 +7,9 @@ M_TYPE const * const __restrict__ input, M_TYPE const * const __restrict__ param
     IND_TYPE Y, IND_TYPE H,
 	IND_TYPE C, IND_TYPE F) {
 /*
-[V f; U (2, f); ULambda y; T (16, c); Hoist_vars [c]; T (1, x); T (3, w);
-  T (3, h); T (56, x);
-  Lambda_apply y [((Iter 7), (Arg 10)); ((Iter 3), (Arg 14))]; T (2, c);
+[V f; U (2, f); ULambda y; T (4, c); Hoist_vars [c]; T (8, x); T (3, w);
+  T (3, h); T (7, x);
+  Lambda_apply y [((Iter 7), (Arg 10)); ((Iter 3), (Arg 14))]; T (8, c);
   T (2, x)]
 */
 IND_TYPE c, c0, cp_0, c0_p_0, cp_1, h, hp_0, w, wp_0, x, x0, xp_0, x0_p_0, x1_p_0, x1, xp_1, x0_p_1, xp_2, y, yp_0;
@@ -34,32 +34,32 @@ for (x1 = x2, x1_p_0 = 0;
 	x1 < x2 + 112;
 	x1 += 56, x1_p_0 += 56){
 	// y = 112, x = 56, h = 3, w = 3, c = 32, f = 32
-	// T (c, 2) (32 / 16)
+	// T (c, 8) (32 / 4)
 	for (c0 = c1, c0_p_0 = 0;
 		c0 < c1 + 32;
-		c0 += 16, c0_p_0 += 16){
+		c0 += 4, c0_p_0 += 4){
 			for (y = y0, yp_0 = 0;
 				y < y0 + 70;
 				y += 10, yp_0 += 10){
-				// y = u_y, x = 56, h = 3, w = 3, c = 16, f = 32
-				// T (x, 56) (56 / 1)
+				// y = u_y, x = 56, h = 3, w = 3, c = 4, f = 32
+				// T (x, 7) (56 / 8)
 				for (x0 = x1, x0_p_1 = x1_p_0, x0_p_0 = 0;
 					x0 < x1 + 56;
-					x0 += 1, x0_p_1 += 1, x0_p_0 += 1){
-					// y = u_y, x = 1, h = 3, w = 3, c = 16, f = 32
+					x0 += 8, x0_p_1 += 8, x0_p_0 += 8){
+					// y = u_y, x = 8, h = 3, w = 3, c = 4, f = 32
 					// T (h, 3) (3 / 1)
 					for (h = h0, hp_0 = 0;
 						h < h0 + 3;
 						h += 1, hp_0 += 1){
-						// y = u_y, x = 1, h = 1, w = 3, c = 16, f = 32
+						// y = u_y, x = 8, h = 1, w = 3, c = 4, f = 32
 						// T (w, 3) (3 / 1)
 						for (w = w0, wp_0 = 0;
 							w < w0 + 3;
 							w += 1, wp_0 += 1){
-							// y = u_y, x = 1, h = 1, w = 1, c = 16, f = 32
-							// T (x, 1) (1 / 1)
+							// y = u_y, x = 8, h = 1, w = 1, c = 4, f = 32
+							// T (x, 8) (8 / 1)
 							for (x = x0, xp_2 = x0_p_1, xp_1 = x0_p_0, xp_0 = 0;
-								x < x0 + 1;
+								x < x0 + 8;
 								x += 1, xp_2 += 1, xp_1 += 1, xp_0 += 1){
 										mem_vec_0 = _mm512_loadu_ps(&output[(F * Y) * x + F * y + f]);
 										mem_vec_1 = _mm512_loadu_ps(&output[(F * Y) * x + F * y + f + 16]);
@@ -81,10 +81,10 @@ for (x1 = x2, x1_p_0 = 0;
 										mem_vec_17 = _mm512_loadu_ps(&output[(F * Y) * x + F * (y + 8) + f + 16]);
 										mem_vec_18 = _mm512_loadu_ps(&output[(F * Y) * x + F * (y + 9) + f]);
 										mem_vec_19 = _mm512_loadu_ps(&output[(F * Y) * x + F * (y + 9) + f + 16]);
-										// y = u_y, x = 1, h = 1, w = 1, c = 16, f = 32
-										// T (c, 16) (16 / 1)
+										// y = u_y, x = 1, h = 1, w = 1, c = 4, f = 32
+										// T (c, 4) (4 / 1)
 										for (c = c0, cp_1 = c0_p_0, cp_0 = 0;
-											c < c0 + 16;
+											c < c0 + 4;
 											c += 1, cp_1 += 1, cp_0 += 1){
 											scal_0 = input[(C * (Y + H - 1)) * (x + w) + C * (y + h) + c];
 											vec_1 = _mm512_set1_ps(scal_0);
@@ -225,25 +225,25 @@ for (x1 = x2, x1_p_0 = 0;
 			for (y = y0 + 70, yp_0 = 0;
 				y < y0 + 70 + 42;
 				y += 14, yp_0 += 14){
-				// y = u_y, x = 56, h = 3, w = 3, c = 16, f = 32
-				// T (x, 56) (56 / 1)
+				// y = u_y, x = 56, h = 3, w = 3, c = 4, f = 32
+				// T (x, 7) (56 / 8)
 				for (x0 = x1, x0_p_1 = x1_p_0, x0_p_0 = 0;
 					x0 < x1 + 56;
-					x0 += 1, x0_p_1 += 1, x0_p_0 += 1){
-					// y = u_y, x = 1, h = 3, w = 3, c = 16, f = 32
+					x0 += 8, x0_p_1 += 8, x0_p_0 += 8){
+					// y = u_y, x = 8, h = 3, w = 3, c = 4, f = 32
 					// T (h, 3) (3 / 1)
 					for (h = h0, hp_0 = 0;
 						h < h0 + 3;
 						h += 1, hp_0 += 1){
-						// y = u_y, x = 1, h = 1, w = 3, c = 16, f = 32
+						// y = u_y, x = 8, h = 1, w = 3, c = 4, f = 32
 						// T (w, 3) (3 / 1)
 						for (w = w0, wp_0 = 0;
 							w < w0 + 3;
 							w += 1, wp_0 += 1){
-							// y = u_y, x = 1, h = 1, w = 1, c = 16, f = 32
-							// T (x, 1) (1 / 1)
+							// y = u_y, x = 8, h = 1, w = 1, c = 4, f = 32
+							// T (x, 8) (8 / 1)
 							for (x = x0, xp_2 = x0_p_1, xp_1 = x0_p_0, xp_0 = 0;
-								x < x0 + 1;
+								x < x0 + 8;
 								x += 1, xp_2 += 1, xp_1 += 1, xp_0 += 1){
 										mem_vec_20 = _mm512_loadu_ps(&output[(F * Y) * x + F * y + f]);
 										mem_vec_21 = _mm512_loadu_ps(&output[(F * Y) * x + F * y + f + 16]);
@@ -273,10 +273,10 @@ for (x1 = x2, x1_p_0 = 0;
 										mem_vec_45 = _mm512_loadu_ps(&output[(F * Y) * x + F * (y + 12) + f + 16]);
 										mem_vec_46 = _mm512_loadu_ps(&output[(F * Y) * x + F * (y + 13) + f]);
 										mem_vec_47 = _mm512_loadu_ps(&output[(F * Y) * x + F * (y + 13) + f + 16]);
-										// y = u_y, x = 1, h = 1, w = 1, c = 16, f = 32
-										// T (c, 16) (16 / 1)
+										// y = u_y, x = 1, h = 1, w = 1, c = 4, f = 32
+										// T (c, 4) (4 / 1)
 										for (c = c0, cp_1 = c0_p_0, cp_0 = 0;
-											c < c0 + 16;
+											c < c0 + 4;
 											c += 1, cp_1 += 1, cp_0 += 1){
 											scal_0 = input[(C * (Y + H - 1)) * (x + w) + C * (y + h) + c];
 											vec_1 = _mm512_set1_ps(scal_0);
