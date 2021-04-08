@@ -7,8 +7,8 @@ M_TYPE const * const __restrict__ input, M_TYPE const * const __restrict__ param
     IND_TYPE Y, IND_TYPE H,
 	IND_TYPE C, IND_TYPE F) {
 /*
-[V f; U (2, f); U (14, y); T (256, c); Hoist_vars [c]; T (2, x); T (3, w);
-  T (3, h); T (1, f); T (2, c); T (7, x); T (1, y); T (16, f); T (1, c)]
+[V f; U (2, f); U (14, y); T (4, c); Hoist_vars [c]; T (14, x); T (3, w);
+  T (3, h); T (4, f); T (16, c); T (1, x); T (1, y); T (4, f); T (8, c)]
 */
 IND_TYPE c, c0, cp_0, c0_p_0, c1_p_0, c1, cp_1, c0_p_1, cp_2, f, f0, fp_0, f0_p_0, fp_1, h, hp_0, w, wp_0, x, x0, xp_0, x0_p_0, xp_1, y, yp_0;
 
@@ -27,49 +27,49 @@ IND_TYPE f1 = 0;
 float scal_0 ,scal_1 ,scal_10 ,scal_11 ,scal_12 ,scal_13 ,scal_2 ,scal_3 ,scal_4 ,scal_5 ,scal_6 ,scal_7 ,scal_8 ,scal_9;
 __m512 mem_vec_0 ,mem_vec_1 ,mem_vec_10 ,mem_vec_11 ,mem_vec_12 ,mem_vec_13 ,mem_vec_14 ,mem_vec_15 ,mem_vec_16 ,mem_vec_17 ,mem_vec_18 ,mem_vec_19 ,mem_vec_2 ,mem_vec_20 ,mem_vec_21 ,mem_vec_22 ,mem_vec_23 ,mem_vec_24 ,mem_vec_25 ,mem_vec_26 ,mem_vec_27 ,mem_vec_3 ,mem_vec_4 ,mem_vec_5 ,mem_vec_6 ,mem_vec_7 ,mem_vec_8 ,mem_vec_9 ,vec_0 ,vec_1 ,vec_10 ,vec_11 ,vec_12 ,vec_13 ,vec_14 ,vec_15 ,vec_16 ,vec_17 ,vec_18 ,vec_19 ,vec_2 ,vec_20 ,vec_21 ,vec_22 ,vec_23 ,vec_24 ,vec_25 ,vec_26 ,vec_27 ,vec_28 ,vec_29 ,vec_3 ,vec_30 ,vec_31 ,vec_32 ,vec_33 ,vec_34 ,vec_35 ,vec_36 ,vec_37 ,vec_38 ,vec_39 ,vec_4 ,vec_40 ,vec_41 ,vec_42 ,vec_43 ,vec_5 ,vec_6 ,vec_7 ,vec_8 ,vec_9;
 // y = 14, x = 14, h = 3, w = 3, c = 512, f = 512
-// T (c, 1) (512 / 512)
+// T (c, 8) (512 / 64)
 for (c1 = c2, c1_p_0 = 0;
 	c1 < c2 + 512;
-	c1 += 512, c1_p_0 += 512){
-	// y = 14, x = 14, h = 3, w = 3, c = 512, f = 512
-	// T (f, 16) (512 / 32)
+	c1 += 64, c1_p_0 += 64){
+	// y = 14, x = 14, h = 3, w = 3, c = 64, f = 512
+	// T (f, 4) (512 / 128)
 	for (f0 = f1, f0_p_0 = 0;
 		f0 < f1 + 512;
-		f0 += 32, f0_p_0 += 32){
-		// y = 14, x = 14, h = 3, w = 3, c = 512, f = 32
+		f0 += 128, f0_p_0 += 128){
+		// y = 14, x = 14, h = 3, w = 3, c = 64, f = 128
 		// T (y, 1) (14 / 14)
 		for (y = y0, yp_0 = 0;
 			y < y0 + 14;
 			y += 14, yp_0 += 14){
-			// y = 14, x = 14, h = 3, w = 3, c = 512, f = 32
-			// T (x, 7) (14 / 2)
+			// y = 14, x = 14, h = 3, w = 3, c = 64, f = 128
+			// T (x, 1) (14 / 14)
 			for (x0 = x1, x0_p_0 = 0;
 				x0 < x1 + 14;
-				x0 += 2, x0_p_0 += 2){
-				// y = 14, x = 2, h = 3, w = 3, c = 512, f = 32
-				// T (c, 2) (512 / 256)
+				x0 += 14, x0_p_0 += 14){
+				// y = 14, x = 14, h = 3, w = 3, c = 64, f = 128
+				// T (c, 16) (64 / 4)
 				for (c0 = c1, c0_p_1 = c1_p_0, c0_p_0 = 0;
-					c0 < c1 + 512;
-					c0 += 256, c0_p_1 += 256, c0_p_0 += 256){
-					// y = 14, x = 2, h = 3, w = 3, c = 256, f = 32
-					// T (f, 1) (32 / 32)
+					c0 < c1 + 64;
+					c0 += 4, c0_p_1 += 4, c0_p_0 += 4){
+					// y = 14, x = 14, h = 3, w = 3, c = 4, f = 128
+					// T (f, 4) (128 / 32)
 					for (f = f0, fp_1 = f0_p_0, fp_0 = 0;
-						f < f0 + 32;
+						f < f0 + 128;
 						f += 32, fp_1 += 32, fp_0 += 32){
-						// y = 14, x = 2, h = 3, w = 3, c = 256, f = 32
+						// y = 14, x = 14, h = 3, w = 3, c = 4, f = 32
 						// T (h, 3) (3 / 1)
 						for (h = h0, hp_0 = 0;
 							h < h0 + 3;
 							h += 1, hp_0 += 1){
-							// y = 14, x = 2, h = 1, w = 3, c = 256, f = 32
+							// y = 14, x = 14, h = 1, w = 3, c = 4, f = 32
 							// T (w, 3) (3 / 1)
 							for (w = w0, wp_0 = 0;
 								w < w0 + 3;
 								w += 1, wp_0 += 1){
-								// y = 14, x = 2, h = 1, w = 1, c = 256, f = 32
-								// T (x, 2) (2 / 1)
+								// y = 14, x = 14, h = 1, w = 1, c = 4, f = 32
+								// T (x, 14) (14 / 1)
 								for (x = x0, xp_1 = x0_p_0, xp_0 = 0;
-									x < x0 + 2;
+									x < x0 + 14;
 									x += 1, xp_1 += 1, xp_0 += 1){
 											mem_vec_0 = _mm512_loadu_ps(&output[(F * Y) * x + F * y + f]);
 											mem_vec_1 = _mm512_loadu_ps(&output[(F * Y) * x + F * y + f + 16]);
@@ -99,10 +99,10 @@ for (c1 = c2, c1_p_0 = 0;
 											mem_vec_25 = _mm512_loadu_ps(&output[(F * Y) * x + F * (y + 12) + f + 16]);
 											mem_vec_26 = _mm512_loadu_ps(&output[(F * Y) * x + F * (y + 13) + f]);
 											mem_vec_27 = _mm512_loadu_ps(&output[(F * Y) * x + F * (y + 13) + f + 16]);
-											// y = 14, x = 1, h = 1, w = 1, c = 256, f = 32
-											// T (c, 256) (256 / 1)
+											// y = 14, x = 1, h = 1, w = 1, c = 4, f = 32
+											// T (c, 4) (4 / 1)
 											for (c = c0, cp_2 = c0_p_1, cp_1 = c0_p_0, cp_0 = 0;
-												c < c0 + 256;
+												c < c0 + 4;
 												c += 1, cp_2 += 1, cp_1 += 1, cp_0 += 1){
 												scal_0 = input[(C * (Y + H - 1)) * (x + w) + C * (y + h) + c];
 												vec_1 = _mm512_set1_ps(scal_0);
