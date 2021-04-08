@@ -193,12 +193,12 @@ def conv2d_ttile_1kernel(name, batch_size, width, height, kernel_w, kernel_h, in
 
 
     for id_conv in [1]:
-        for factor in ["factor_out_channels", "factor_yy", "factor_xx", "factor_in_channels"]:
+        for factor in ["factor_out_channels", "factor_yy", "factor_xx", "factor_in_channels", "factor_h", "factor_w"]:
             for nb_factor in range(len(info_tile[id_conv][factor])):
                 locals()[factor + "_" + str(nb_factor)] = info_tile[id_conv][factor][nb_factor]
 
     for id_conv in [1]:
-        for name_axe in ["out_channels", "xx", "yy", "in_channels"]:
+        for name_axe in ["out_channels", "xx", "yy", "in_channels", "h", "w"]:
             factor = "factor_" + name_axe
             for nb_factor in range(len(info_tile[id_conv][factor])):
                 axe0 = "axe_" + name_axe + "_" + str(nb_factor)
@@ -316,12 +316,12 @@ def conv2d_ttile_2kernel(name, batch_size, width, height, kernel_w, kernel_h, in
     locals()["axe_in_channels2_0"], locals()["axe_kernel_h2_0"], locals()["axe_kernel_w2_0"] = Out2.op.reduce_axis
 
     for id_conv in [1, 2]:
-        for factor in ["factor_out_channels", "factor_yy", "factor_xx", "factor_in_channels"]:
+        for factor in ["factor_out_channels", "factor_yy", "factor_xx", "factor_in_channels", "factor_h", "factor_w"]:
             for nb_factor in range(len(info_tile[id_conv][factor])):
                 locals()[factor + str(id_conv) + "_" + str(nb_factor)] = info_tile[id_conv][factor][nb_factor]
 
     for id_conv in [1]:
-        for name_axe in ["out_channels", "xx", "yy", "in_channels"]:
+        for name_axe in ["out_channels", "xx", "yy", "in_channels", "h", "w"]:
             factor = "factor_" + name_axe
             for nb_factor in range(len(info_tile[id_conv][factor])):
                 axe0 = "axe_" + name_axe + str(id_conv) + "_" + str(nb_factor)
@@ -329,7 +329,7 @@ def conv2d_ttile_2kernel(name, batch_size, width, height, kernel_w, kernel_h, in
                 locals()[axe0], locals()[axe1] = s[Out1].split(locals()[axe0], factor = locals()["factor_" + name_axe + str(id_conv) + "_" + str(nb_factor)])
 
     for id_conv in [2]:
-        for name_axe in ["out_channels", "xx", "yy", "in_channels"]:
+        for name_axe in ["out_channels", "xx", "yy", "in_channels", "h", "w"]:
             factor = "factor_" + name_axe
             for nb_factor in range(len(info_tile[id_conv][factor])):
                 axe0 = "axe_" + name_axe + str(id_conv) + "_" + str(nb_factor)
