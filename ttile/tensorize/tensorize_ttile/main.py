@@ -9,8 +9,8 @@ import parser
 import sys
 import os
 
-HOME = "/root"
-# HOME = "/hst"
+# HOME = "/root"
+HOME = "/home/colo"
 
 def generate_ttile_conv2d(name_file, number_of_file):
 
@@ -70,6 +70,8 @@ def conv_impl(name_file, number_of_file):
     return ll_code
 
 def intrin_conv(name_function, W, H, C, F, X, Y, stride_w, stride_h):
+
+    print(name_function, W, H, C, F, X, Y, stride_w, stride_h)
 
     """
     W = kernel_w,
@@ -419,30 +421,33 @@ if __name__ == '__main__':
     archi = sys.argv[2]
     nb_runs = int(sys.argv[3])
 
-    for runs in range(200):
+    for runs in range(nb_runs):
 
-        os.system(f"""(cd {HOME}/matmul_bench && python3 create.py {name_conv} {archi})""")
-        os.system(f"""(cd {HOME}/matmul_bench/ml_utils && dune exec ./stephane_search.exe)""")
-        os.system(f"""cp {HOME}/matmul_bench/c_bench/gen/gen_conv.c {HOME}/tvm_ttile/ttile/tensorize/tensorize_ttile/c_files/{name_conv}.c""")
+        # os.system(f"""(cd {HOME}/matmul_bench && python3.8 create.py {name_conv} {archi})""")
+        # os.system(f"""(cd {HOME}/matmul_bench/ml_utils && dune exec ./stephane_search.exe)""")
+        # os.system(f"""cp {HOME}/matmul_bench/c_bench/gen/gen_conv.c {HOME}/tvm_ttile/ttile/tensorize/tensorize_ttile/c_files/{name_conv}.c""")
 
-        try:
-        #if True:
+        #try:
+        if True:
 
             out_channels, in_channels, height, width, kernel_h, kernel_w, stride_h, stride_w = input_conv.input_conv[name_conv]
             batch_size = 1
 
-            #if archi == "avx2":
-            #    target = "llvm -mcpu=core-avx2"
-            #    option_compilation = ["-mavx2", "-mfma"]#, "-O3"]
-            #else:
-            target = "llvm -mcpu=skylake-avx512"
-            option_compilation = ["-mavx512f", "-mfma"]#, "-O3"]
+            if archi == "avx2":
+                target = "llvm -mcpu=core-avx2"
+                option_compilation = ["-mavx2", "-mfma"]#, "-O3"]
+            else:
+                target = "llvm -mcpu=skylake-avx512"
+                option_compilation = ["-mavx512f", "-mfma"]#, "-O3"]
 
             log_file = "autotvm_conv2d.log"
             ctx = tvm.context(target)
             dtype = "float32"
 
             info_tile = parser.parser(name_conv)
+            print(info_tile)
+
+            #print(info_tile)
 
             if len(info_tile) == 1:
                 s, I = conv2d_ttile_1kernel(name_conv, batch_size, width, height, kernel_w, kernel_h, in_channels, out_channels, info_tile, stride_w, stride_h)
@@ -488,11 +493,18 @@ if __name__ == '__main__':
 
             output_conv2d_test = oo.asnumpy()
 
+            for b in range(1):
+                
+                for w in range(width):
+                    for f in range(out_channels):
+                        for h in range(height):
+                            print(b, h, w, f, output_conv2d_test[b,h,w,f], tensorize_result[b,h,w,f])
+
             tvm.testing.assert_allclose(tensorize_result, output_conv2d_test, rtol=1e-5)
-            print(results)
+            # print(results)
 
             for k in range(19):
-                results += [float(os.popen("python3 run.py " + name_conv + " " + archi).read())]
+                results += [float(os.popen("python3.8 run.py " + name_conv + " " + archi).read())]
 
             for k in range(5):
                 results.remove(max(results))
@@ -513,8 +525,8 @@ if __name__ == '__main__':
                 os.system("cp tensorize_files/" + name_conv + "1.c old_c_files/" + name_conv + "1_tensorize__" + str(runs) + ".c" )
                 os.system("cp tensorize_files/" + name_conv + "2.c old_c_files/" + name_conv + "2_tensorize__" + str(runs) + ".c" )
 
-        except:
-        #else:
+        #except:
+        else:
             tt = open("faux.csv", "a")
             tt.write(name_conv + " " + str(runs) + "\n")
             tt.close()

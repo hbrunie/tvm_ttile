@@ -9,8 +9,8 @@ import parser
 import sys
 import os
 
-HOME = "/root"
-# HOME = "/hst"
+# HOME = "/root"
+HOME = "/home/colo"
 
 def generate_ttile_conv2d(name_file, number_of_file):
 
@@ -425,11 +425,11 @@ if __name__ == '__main__':
         out_channels, in_channels, height, width, kernel_h, kernel_w, stride_h, stride_w = input_conv.input_conv[name_conv]
         batch_size = 1
 
-        #if archi == "avx2":
-        #    target = "llvm -mcpu=core-avx2"
-        #    option_compilation = ["-mavx2", "-mfma"]#, "-O3"]
-        #else:
-        target = "llvm -mcpu=skylake-avx512"
+        if archi == "avx2":
+            target = "llvm -mcpu=core-avx2"
+            option_compilation = ["-mavx2", "-mfma"]#, "-O3"]
+        else:
+            target = "llvm -mcpu=skylake-avx512"
         option_compilation = ["-mavx512f", "-mfma"]#, "-O3"]
 
         log_file = "autotvm_conv2d.log"
