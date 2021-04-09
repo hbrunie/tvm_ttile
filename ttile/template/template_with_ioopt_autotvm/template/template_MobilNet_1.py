@@ -17,14 +17,22 @@ ctx = tvm.context(target)
 dtype="float32"
 
 batch_size = 1
-height = 112
-width = 112
+height = yy = 112
+width = xx = 112
 in_channels = 32
 out_channels = 32
 kernel_h = 3
 kernel_w = 3
 stride_h = 1
 stride_w = 1
+
+size_in_channels_kernel  = 1
+size_out_channels_kernel = 32
+size_xx_kernel    = 1
+size_yy_kernel   = 1
+size_kernel_h_kernel     = 3
+size_kernel_w_kernel     = 3
+
     
 @autotvm.template("conv2d_ttile_MobilNet_1")
 def conv2d_ttile_MobilNet_1(batch_size, height, width, in_channels, out_channels, kernel_h, kernel_w, stride_h, stride_w):
@@ -35,11 +43,11 @@ def conv2d_ttile_MobilNet_1(batch_size, height, width, in_channels, out_channels
     axe_kernel_h = te.reduce_axis((0, kernel_h), name="axe_kernel_h")
     axe_kernel_w = te.reduce_axis((0, kernel_w), name="axe_kernel_w")
 
-    out_h = height  // stride_h 
-    out_w = width // stride_w 
+    out_height = height  // stride_h 
+    out_width = width // stride_w 
 
     Out = te.compute(
-        (batch_size, out_w, out_h, out_channels),
+        (batch_size, out_width, out_height, out_channels),
         lambda batch, xx, yy, out_channels: te.sum(
             A[batch, stride_w * xx + axe_kernel_w, stride_h * yy  + axe_kernel_h, axe_in_channels] * W[axe_kernel_w, axe_kernel_h, axe_in_channels, out_channels ],
             axis=[axe_in_channels, axe_kernel_h, axe_kernel_w],)
@@ -52,38 +60,55 @@ def conv2d_ttile_MobilNet_1(batch_size, height, width, in_channels, out_channels
     # get the config object
     cfg = autotvm.get_config()
     
-    cfg.define_knob("tile_out_channels_0", [k for k in range(1, out_channels + 1) if out_channels%k == 0])
-            
-    cfg.define_knob("tile_out_w_0", [k for k in range(1, out_w + 1) if out_w%k == 0])
-            
-    cfg.define_knob("tile_out_h_0", [k for k in range(1, out_h + 1) if out_h%k == 0])
-            
-    axe_out_channels_1, axe_out_channels_0 = s[Out].split(axe_out_channels, cfg["tile_out_channels_0"].val)
-                
-    axe_xx_1, axe_xx_0 = s[Out].split(axe_xx, cfg["tile_out_w_0"].val)
-                
-    axe_yy_1, axe_yy_0 = s[Out].split(axe_yy, cfg["tile_out_h_0"].val)
-                
-    s[Out].reorder(axe_xx_1,axe_yy_1,axe_out_channels_1,axe_xx_0,axe_kernel_h,axe_kernel_w,axe_in_channels,axe_out_channels_0,axe_yy_0)
-    
-    cfg.define_knob("unroll_axe_yy_0", [True, False])
+    cfg.define_knob("tile_axe_in_channels_1", [k for k in range(size_in_channels_kernel, in_channels + 1) if in_channels%k == 0 and k%size_in_channels_kernel == 0])
         
+    cfg.define_knob("tile_axe_yy_1", [k for k in range(size_yy_kernel, yy + 1) if yy%k == 0 and k%size_yy_kernel == 0])
+        
+    cfg.define_knob("tile_axe_xx_0", [k for k in range(size_xx_kernel, xx + 1) if xx%k == 0 and k%size_xx_kernel == 0])
+        
+    axe_in_channels_2, axe_in_channels_1 = s[Out].split(axe_in_channels, cfg["tile_axe_in_channels_1"].val)
+        
+    axe_yy_2, axe_yy_1 = s[Out].split(axe_yy, cfg["tile_axe_yy_1"].val)
+        
+    axe_xx_1, axe_xx_0 = s[Out].split(axe_xx, cfg["tile_axe_xx_0"].val)
+        
+    axe_kernel_h_1, axe_kernel_h_0 = s[Out].split(axe_kernel_h, size_kernel_h_kernel)
+            
+    axe_kernel_w_1, axe_kernel_w_0 = s[Out].split(axe_kernel_w, size_kernel_w_kernel)
+            
+    axe_in_channels_1, axe_in_channels_0 = s[Out].split(axe_in_channels_1, size_in_channels_kernel)
+            
+    axe_yy_1, axe_yy_0 = s[Out].split(axe_yy_1, size_yy_kernel)
+            
+    axe_out_channels_1, axe_out_channels_0 = s[Out].split(axe_out_channels, size_out_channels_kernel)
+            
+    s[Out].reorder(axe_kernel_h_1,axe_kernel_w_1,axe_in_channels_2,axe_out_channels_1,axe_xx_1,axe_yy_2,axe_in_channels_1,axe_yy_1,axe_xx_0,axe_kernel_h_0,axe_kernel_w_0,axe_in_channels_0,axe_yy_0,axe_out_channels_0)
+    
     cfg.define_knob("unroll_axe_out_channels_0", [True, False])
         
-    if cfg["unroll_axe_yy_0"].val:
-        s[Out].unroll(axe_yy_0)
+    cfg.define_knob("unroll_axe_yy_0", [True, False])
         
     if cfg["unroll_axe_out_channels_0"].val:
         s[Out].unroll(axe_out_channels_0)
         
-    #s[Out].vectorize(axe_yy_0)
+    if cfg["unroll_axe_yy_0"].val:
+        s[Out].unroll(axe_yy_0)
+        
     s[Out].vectorize(axe_out_channels_0)
      
+    fuse = s[Out].fuse(axe_out_channels_1,axe_xx_1,axe_yy_2)
+    s[Out].parallel(fuse)
+    
     #print(tvm.lower(s, [A, W, Out]))
 
     return s, [A, W, Out]
     
 def evaluate():
+    try:
+        os.mkdir("log")
+    except FileExistsError:
+        pass
+
     task = autotvm.task.create("conv2d_ttile_MobilNet_1", args=(batch_size, height, width, in_channels, out_channels, kernel_h, kernel_w, stride_h, stride_w), target=target)
     print(task.config_space)
     print(task.flop)
@@ -96,7 +121,7 @@ def evaluate():
 
     tuner = autotvm.tuner.XGBTuner(task)
     tuner.tune(
-        n_trial = 1000,
+        n_trial = 10,
         #n_trial=len(task.config_space),
         measure_option=measure_option,
         callbacks=[autotvm.callback.log_to_file(log_file)],
@@ -113,13 +138,13 @@ def evaluate():
             s, arg_bufs = conv2d_ttile_MobilNet_1(batch_size, height, width, in_channels, out_channels, kernel_h, kernel_w, stride_h, stride_w)
             f = tvm.build(s, arg_bufs)
 
-    out_h = height // stride_h 
-    out_w = width // stride_w 
+    out_height = height // stride_h 
+    out_width = width // stride_w 
 
     a = tvm.nd.array(np.random.uniform(size=(batch_size, width + kernel_w - 1, height + kernel_h - 1, in_channels)).astype(dtype), ctx)
     w = tvm.nd.array(np.random.uniform(size=(kernel_w, kernel_h, in_channels, out_channels)).astype(dtype), ctx)
-    o = tvm.nd.array(np.zeros((batch_size, out_w, out_h, out_channels), dtype=dtype), ctx)
-    oo = tvm.nd.array(np.zeros((batch_size, out_w, out_h, out_channels), dtype=dtype), ctx)
+    o = tvm.nd.array(np.zeros((batch_size, out_width, out_height, out_channels), dtype=dtype), ctx)
+    oo = tvm.nd.array(np.zeros((batch_size, out_width, out_height, out_channels), dtype=dtype), ctx)
 
     # Run
     f(a, w, o)

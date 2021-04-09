@@ -1,8 +1,6 @@
 import input_conv
-import input_sol
-import solution
 import reorder
-
+import size_kernel
 
 convert_axe = {
     "f": "axe_out_channels",
@@ -16,22 +14,12 @@ convert_axe = {
 convert_name = {
     "f": "out_channels",
     "c": "in_channels",
-    "x": "out_w",
-    "y": "out_h",
+    "x": "out_width",
+    "y": "out_height",
     "w": "kernel_w",
     "h": "kernel_h"
 }
 
-def find_axe_to_vectorize(order, sol):
-    """
-    for k in range(len(order)):
-        if "kernel" not in order[-1 - k] and "in_channels" not in order[-1 - k]:
-            return order[-1-k]
-    """
-    if sol["f"][0] != 0:
-        return("axe_out_channels_0")
-    else:
-        return("axe_out_channels")
 
 def generate_template(name_input, target, archi):
 
@@ -42,7 +30,7 @@ def generate_template(name_input, target, archi):
     batch_size = 1
     out_channels, in_channels, height, width, kernel_h, kernel_w, stride_h, stride_w = input_conv.input_conv[name_input]
 
-    sol = solution.solution(name_input, archi)
+    lorder, cpu, l1, l2, fuse = reorder.reorder(name_input, archi)
     #headers
     f.write("""
 import os
@@ -65,14 +53,22 @@ ctx = tvm.context(target)
 dtype="float32"
 
 batch_size = {batch_size}
-height = {height}
-width = {width}
+height = yy = {height}
+width = xx = {width}
 in_channels = {in_channels}
 out_channels = {out_channels}
 kernel_h = {kernel_h}
 kernel_w = {kernel_w}
 stride_h = {stride_h}
 stride_w = {stride_w}
+
+size_in_channels_kernel  = {size_kernel.size_kernel()["in_channels_kernel"]}
+size_out_channels_kernel = {size_kernel.size_kernel()["out_channels_kernel"]}
+size_xx_kernel    = {size_kernel.size_kernel()["xx_kernel"]}
+size_yy_kernel   = {size_kernel.size_kernel()["yy_kernel"]}
+size_kernel_h_kernel     = {size_kernel.size_kernel()["kernel_h_kernel"]}
+size_kernel_w_kernel     = {size_kernel.size_kernel()["kernel_w_kernel"]}
+
     """)
 
     #function
@@ -86,11 +82,11 @@ def conv2d_ttile_{name_input_}(batch_size, height, width, in_channels, out_chann
     axe_kernel_h = te.reduce_axis((0, kernel_h), name="axe_kernel_h")
     axe_kernel_w = te.reduce_axis((0, kernel_w), name="axe_kernel_w")
 
-    out_h = height  // stride_h 
-    out_w = width // stride_w 
+    out_height = height  // stride_h 
+    out_width = width // stride_w 
 
     Out = te.compute(
-        (batch_size, out_w, out_h, out_channels),
+        (batch_size, out_width, out_height, out_channels),
         lambda batch, xx, yy, out_channels: te.sum(
             A[batch, stride_w * xx + axe_kernel_w, stride_h * yy  + axe_kernel_h, axe_in_channels] * W[axe_kernel_w, axe_kernel_h, axe_in_channels, out_channels ],
             axis=[axe_in_channels, axe_kernel_h, axe_kernel_w],)
@@ -104,26 +100,60 @@ def conv2d_ttile_{name_input_}(batch_size, height, width, in_channels, out_chann
     cfg = autotvm.get_config()
     """)
 
-    # TODO pb with some tile when k > 1
-    for key in sol:
-        for k in range(sol[key][0]):
+    deja_vu = set()
+
+    # for k in l2:
+    #     f.write(f"""
+    # print([k for k in range(size_{"_".join(k.split("_")[1:-1])}_kernel, {"_".join(k.split("_")[1:-1])} + 1) if {"_".join(k.split("_")[1:-1])}%k == 0 and k%size_{"_".join(k.split("_")[1:-1])}_kernel == 0])
+    #     """)
+
+    for k in l2:
+        f.write(f"""
+    cfg.define_knob("tile_{k}", [k for k in range(size_{"_".join(k.split("_")[1:-1])}_kernel, {"_".join(k.split("_")[1:-1])} + 1) if {"_".join(k.split("_")[1:-1])}%k == 0 and k%size_{"_".join(k.split("_")[1:-1])}_kernel == 0])
+        """)
+
+
+    for k in l2:
+        name_axe_i = k
+        id = int(k.split("_")[-1]) + 1
+        name_axe_o = "_".join(k.split("_")[:-1]) + "_" + str(id)
+        f.write(f"""
+    {name_axe_o}, {name_axe_i} = s[Out].split({"_".join(k.split("_")[:-1])}, cfg["tile_{k}"].val)
+        """)
+        deja_vu.add(name_axe_o)
+        deja_vu.add(name_axe_i)
+
+    for k in l1:
+        name_axe_i = k
+        id = int(k.split("_")[-1]) + 1
+        name_axe_o = "_".join(k.split("_")[:-1]) + "_" + str(id)
+        if name_axe_o in deja_vu:
             f.write(f"""
-    cfg.define_knob("tile_{convert_name[key]}_{k}", [k for k in range(1, {convert_name[key]} + 1) if {convert_name[key]}%k == 0])
+    {name_axe_o}, {name_axe_i} = s[Out].split({name_axe_o}, size_{"_".join(k.split("_")[1:-1])}_kernel)
             """)
+        else:
+            f.write(f"""
+    {name_axe_o}, {name_axe_i} = s[Out].split({"_".join(k.split("_")[:-1])}, size_{"_".join(k.split("_")[1:-1])}_kernel)
+            """)
+        deja_vu.add(name_axe_o)
+        deja_vu.add(name_axe_i)
 
+    for k in cpu:
+        name_axe_i = k
+        id = int(k.split("_")[-1]) + 1
+        name_axe_o = "_".join(k.split("_")[:-1]) + "_" + str(id)
+        if name_axe_o in deja_vu:
+            f.write(f"""
+    {name_axe_o}, {name_axe_i} = s[Out].split({name_axe_o}, size_{"_".join(k.split("_")[1:-1])}_kernel)
+            """)
+        else:
+            f.write(f"""
+    {name_axe_o}, {name_axe_i} = s[Out].split({"_".join(k.split("_")[:-1])}, size_{"_".join(k.split("_")[1:-1])}_kernel)
+            """)
+        deja_vu.add(name_axe_o)
+        deja_vu.add(name_axe_i)
 
-    for key in sol:
-        if sol[key][0] != 0: 
-            name_axe_init = convert_axe[key]
-            name_axe_intermediate = convert_axe[key]
-            for id_split in range(sol[key][0]):
-                #check les indentations
-                f.write(f"""
-    {name_axe_init}_{id_split+1}, {name_axe_init}_{id_split} = s[Out].split({name_axe_intermediate}, cfg["tile_{convert_name[key]}_{id_split}"].val)
-                """)
-                name_axe_intermediate = name_axe_init + "_" + str(id_split+1)
-
-    lorder = reorder.reorder(name_input, archi)
+    
     order = ",".join(lorder)
     f.write(f"""
     s[Out].reorder({order})
@@ -141,9 +171,13 @@ def conv2d_ttile_{name_input_}(batch_size, height, width, in_channels, out_chann
         """)
 
     f.write(f"""
-    #s[Out].vectorize({lorder[-1]})
-    s[Out].vectorize({find_axe_to_vectorize(lorder, sol)})
-     """)    
+    s[Out].vectorize({lorder[-1]})
+     """) 
+
+    f.write(f"""
+    fuse = s[Out].fuse({",".join(fuse)})
+    s[Out].parallel(fuse)
+    """)
 
     f.write(f"""
     #print(tvm.lower(s, [A, W, Out]))
@@ -153,6 +187,11 @@ def conv2d_ttile_{name_input_}(batch_size, height, width, in_channels, out_chann
 
     f.write(f"""
 def evaluate():
+    try:
+        os.mkdir("log")
+    except FileExistsError:
+        pass
+
     task = autotvm.task.create("conv2d_ttile_{name_input_}", args=(batch_size, height, width, in_channels, out_channels, kernel_h, kernel_w, stride_h, stride_w), target=target)
     print(task.config_space)
     print(task.flop)
@@ -165,7 +204,7 @@ def evaluate():
 
     tuner = autotvm.tuner.XGBTuner(task)
     tuner.tune(
-        n_trial = 1000,
+        n_trial = 10,
         #n_trial=len(task.config_space),
         measure_option=measure_option,
         callbacks=[autotvm.callback.log_to_file(log_file)],
@@ -182,13 +221,13 @@ def evaluate():
             s, arg_bufs = conv2d_ttile_{name_input_}(batch_size, height, width, in_channels, out_channels, kernel_h, kernel_w, stride_h, stride_w)
             f = tvm.build(s, arg_bufs)
 
-    out_h = height // stride_h 
-    out_w = width // stride_w 
+    out_height = height // stride_h 
+    out_width = width // stride_w 
 
     a = tvm.nd.array(np.random.uniform(size=(batch_size, width + kernel_w - 1, height + kernel_h - 1, in_channels)).astype(dtype), ctx)
     w = tvm.nd.array(np.random.uniform(size=(kernel_w, kernel_h, in_channels, out_channels)).astype(dtype), ctx)
-    o = tvm.nd.array(np.zeros((batch_size, out_w, out_h, out_channels), dtype=dtype), ctx)
-    oo = tvm.nd.array(np.zeros((batch_size, out_w, out_h, out_channels), dtype=dtype), ctx)
+    o = tvm.nd.array(np.zeros((batch_size, out_width, out_height, out_channels), dtype=dtype), ctx)
+    oo = tvm.nd.array(np.zeros((batch_size, out_width, out_height, out_channels), dtype=dtype), ctx)
 
     # Run
     f(a, w, o)
@@ -249,8 +288,7 @@ def generate_apply_best(name_input, target, archi):
 
     batch_size = 1
     out_channels, in_channels, height, width, kernel_h, kernel_w, stride_h, stride_w = input_conv.input_conv[name_input]
-
-    sol = solution.solution(name_input, archi)
+    lorder, cpu, l1, l2, fuse = reorder.reorder(name_input, archi)
     #headers
     f.write("""
 import os
@@ -273,14 +311,22 @@ ctx = tvm.context(target)
 dtype="float32"
 
 batch_size = {batch_size}
-height = {height}
-width = {width}
+height = yy = {height}
+width = xx = {width}
 in_channels = {in_channels}
 out_channels = {out_channels}
 kernel_h = {kernel_h}
 kernel_w = {kernel_w}
 stride_h = {stride_h}
 stride_w = {stride_w}
+
+size_in_channels_kernel  = {size_kernel.size_kernel()["in_channels_kernel"]}
+size_out_channels_kernel = {size_kernel.size_kernel()["out_channels_kernel"]}
+size_xx_kernel    = {size_kernel.size_kernel()["xx_kernel"]}
+size_yy_kernel   = {size_kernel.size_kernel()["yy_kernel"]}
+size_kernel_h_kernel     = {size_kernel.size_kernel()["kernel_h_kernel"]}
+size_kernel_w_kernel     = {size_kernel.size_kernel()["kernel_w_kernel"]}
+
     """)
 
     #function
@@ -294,11 +340,11 @@ def conv2d_ttile_{name_input_}(batch_size, height, width, in_channels, out_chann
     axe_kernel_h = te.reduce_axis((0, kernel_h), name="axe_kernel_h")
     axe_kernel_w = te.reduce_axis((0, kernel_w), name="axe_kernel_w")
 
-    out_h = height  // stride_h 
-    out_w = width // stride_w 
+    out_height = height  // stride_h 
+    out_width = width // stride_w 
 
     Out = te.compute(
-        (batch_size, out_w, out_h, out_channels),
+        (batch_size, out_width, out_height, out_channels),
         lambda batch, xx, yy, out_channels: te.sum(
             A[batch, stride_w * xx + axe_kernel_w, stride_h * yy  + axe_kernel_h, axe_in_channels] * W[axe_kernel_w, axe_kernel_h, axe_in_channels, out_channels ],
             axis=[axe_in_channels, axe_kernel_h, axe_kernel_w],)
@@ -312,26 +358,60 @@ def conv2d_ttile_{name_input_}(batch_size, height, width, in_channels, out_chann
     cfg = autotvm.get_config()
     """)
 
-    # TODO pb with some tile when k > 1
-    for key in sol:
-        for k in range(sol[key][0]):
+    deja_vu = set()
+
+    # for k in l2:
+    #     f.write(f"""
+    # print([k for k in range(size_{"_".join(k.split("_")[1:-1])}_kernel, {"_".join(k.split("_")[1:-1])} + 1) if {"_".join(k.split("_")[1:-1])}%k == 0 and k%size_{"_".join(k.split("_")[1:-1])}_kernel == 0])
+    #     """)
+
+    for k in l2:
+        f.write(f"""
+    cfg.define_knob("tile_{k}", [k for k in range(size_{"_".join(k.split("_")[1:-1])}_kernel, {"_".join(k.split("_")[1:-1])} + 1) if {"_".join(k.split("_")[1:-1])}%k == 0 and k%size_{"_".join(k.split("_")[1:-1])}_kernel == 0])
+        """)
+
+
+    for k in l2:
+        name_axe_i = k
+        id = int(k.split("_")[-1]) + 1
+        name_axe_o = "_".join(k.split("_")[:-1]) + "_" + str(id)
+        f.write(f"""
+    {name_axe_o}, {name_axe_i} = s[Out].split({"_".join(k.split("_")[:-1])}, cfg["tile_{k}"].val)
+        """)
+        deja_vu.add(name_axe_o)
+        deja_vu.add(name_axe_i)
+
+    for k in l1:
+        name_axe_i = k
+        id = int(k.split("_")[-1]) + 1
+        name_axe_o = "_".join(k.split("_")[:-1]) + "_" + str(id)
+        if name_axe_o in deja_vu:
             f.write(f"""
-    cfg.define_knob("tile_{convert_name[key]}_{k}", [k for k in range(1, {convert_name[key]} + 1) if {convert_name[key]}%k == 0])
+    {name_axe_o}, {name_axe_i} = s[Out].split({name_axe_o}, size_{"_".join(k.split("_")[1:-1])}_kernel)
             """)
+        else:
+            f.write(f"""
+    {name_axe_o}, {name_axe_i} = s[Out].split({"_".join(k.split("_")[:-1])}, size_{"_".join(k.split("_")[1:-1])}_kernel)
+            """)
+        deja_vu.add(name_axe_o)
+        deja_vu.add(name_axe_i)
 
+    for k in cpu:
+        name_axe_i = k
+        id = int(k.split("_")[-1]) + 1
+        name_axe_o = "_".join(k.split("_")[:-1]) + "_" + str(id)
+        if name_axe_o in deja_vu:
+            f.write(f"""
+    {name_axe_o}, {name_axe_i} = s[Out].split({name_axe_o}, size_{"_".join(k.split("_")[1:-1])}_kernel)
+            """)
+        else:
+            f.write(f"""
+    {name_axe_o}, {name_axe_i} = s[Out].split({"_".join(k.split("_")[:-1])}, size_{"_".join(k.split("_")[1:-1])}_kernel)
+            """)
+        deja_vu.add(name_axe_o)
+        deja_vu.add(name_axe_i)
 
-    for key in sol:
-        if sol[key][0] != 0: 
-            name_axe_init = convert_axe[key]
-            name_axe_intermediate = convert_axe[key]
-            for id_split in range(sol[key][0]):
-                #check les indentations
-                f.write(f"""
-    {name_axe_init}_{id_split+1}, {name_axe_init}_{id_split} = s[Out].split({name_axe_intermediate}, cfg["tile_{convert_name[key]}_{id_split}"].val)
-                """)
-                name_axe_intermediate = name_axe_init + "_" + str(id_split+1)
-
-    lorder = reorder.reorder(name_input, archi)
+    
     order = ",".join(lorder)
     f.write(f"""
     s[Out].reorder({order})
@@ -349,9 +429,13 @@ def conv2d_ttile_{name_input_}(batch_size, height, width, in_channels, out_chann
         """)
 
     f.write(f"""
-    #s[Out].vectorize({lorder[-1]})
-    s[Out].vectorize({find_axe_to_vectorize(lorder, sol)})
-     """)    
+    s[Out].vectorize({lorder[-1]})
+     """) 
+
+    f.write(f"""
+    fuse = s[Out].fuse({",".join(fuse)})
+    s[Out].parallel(fuse)
+    """)
 
     f.write(f"""
     #print(tvm.lower(s, [A, W, Out]))
@@ -369,13 +453,13 @@ def evaluate():
             s, arg_bufs = conv2d_ttile_{name_input_}(batch_size, height, width, in_channels, out_channels, kernel_h, kernel_w, stride_h, stride_w)
             f = tvm.build(s, arg_bufs)
 
-    out_h = height // stride_h 
-    out_w = width // stride_w 
+    out_height = height // stride_h 
+    out_width = width // stride_w 
 
     a = tvm.nd.array(np.random.uniform(size=(batch_size, width + kernel_w - 1, height + kernel_h - 1, in_channels)).astype(dtype), ctx)
     w = tvm.nd.array(np.random.uniform(size=(kernel_w, kernel_h, in_channels, out_channels)).astype(dtype), ctx)
-    o = tvm.nd.array(np.zeros((batch_size, out_w, out_h, out_channels), dtype=dtype), ctx)
-    oo = tvm.nd.array(np.zeros((batch_size, out_w, out_h, out_channels), dtype=dtype), ctx)
+    o = tvm.nd.array(np.zeros((batch_size, out_width, out_height, out_channels), dtype=dtype), ctx)
+    oo = tvm.nd.array(np.zeros((batch_size, out_width, out_height, out_channels), dtype=dtype), ctx)
 
     # Run
     f(a, w, o)
