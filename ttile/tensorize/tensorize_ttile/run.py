@@ -418,52 +418,46 @@ if __name__ == '__main__':
     name_conv = sys.argv[1]
     archi = sys.argv[2]
 
-    for runs in range(1):
+
+    out_channels, in_channels, height, width, kernel_h, kernel_w, stride_h, stride_w = input_conv.input_conv[name_conv]
+    batch_size = 1
 
 
-
-        out_channels, in_channels, height, width, kernel_h, kernel_w, stride_h, stride_w = input_conv.input_conv[name_conv]
-        batch_size = 1
-
-        if archi == "avx2":
-            target = "llvm -mcpu=core-avx2"
-            option_compilation = ["-mavx2", "-mfma"]#, "-O3"]
-        else:
-            target = "llvm -mcpu=skylake-avx512"
+    if archi == "avx2":
+        target = "llvm -mcpu=core-avx2"
+        option_compilation = ["-mavx2", "-mfma"]#, "-O3"]
+    else:
+        target = "llvm -mcpu=skylake-avx512"
         option_compilation = ["-mavx512f", "-mfma"]#, "-O3"]
 
-        log_file = "autotvm_conv2d.log"
-        ctx = tvm.context(target)
-        dtype = "float32"
+    log_file = "autotvm_conv2d.log"
+    ctx = tvm.context(target)
+    dtype = "float32"
 
-        info_tile = parser.parser(name_conv)
+    info_tile = parser.parser(name_conv)
 
-        if len(info_tile) == 1:
-            s, I = conv2d_ttile_1kernel(name_conv, batch_size, width, height, kernel_w, kernel_h, in_channels, out_channels, info_tile, stride_w, stride_h)
-            A, W, Out = I
-        else:
-            s, I = conv2d_ttile_2kernel(name_conv, batch_size, width, height, kernel_w, kernel_h, in_channels, out_channels, info_tile, stride_w, stride_h)
-            A, W, Out = I
+    if len(info_tile) == 1:
+        s, I = conv2d_ttile_1kernel(name_conv, batch_size, width, height, kernel_w, kernel_h, in_channels, out_channels, info_tile, stride_w, stride_h)
+        A, W, Out = I
+    else:
+        s, I = conv2d_ttile_2kernel(name_conv, batch_size, width, height, kernel_w, kernel_h, in_channels, out_channels, info_tile, stride_w, stride_h)
+        A, W, Out = I
 
-        func = tvm.build(s, [A, W, Out], target=target, name="conv")
+    func = tvm.build(s, [A, W, Out], target=target, name="conv")
 
 
 
-        a = tvm.nd.array(np.random.uniform(size=(batch_size, width + kernel_w - 1, height + kernel_h - 1, in_channels)).astype(A.dtype), ctx)
-        w = tvm.nd.array(np.random.uniform(size=(kernel_w, kernel_h, in_channels, out_channels)).astype(W.dtype), ctx)
+    a = tvm.nd.array(np.random.uniform(size=(batch_size, width + kernel_w - 1, height + kernel_h - 1, in_channels)).astype(A.dtype), ctx)
+    w = tvm.nd.array(np.random.uniform(size=(kernel_w, kernel_h, in_channels, out_channels)).astype(W.dtype), ctx)
 
-        # a = tvm.nd.array(np.ones((batch_size, width + kernel_w - 1, height + kernel_h - 1, in_channels), dtype="float32"), ctx)
-        # w = tvm.nd.array(np.ones((kernel_w, kernel_h, in_channels, out_channels), dtype="float32"), ctx)
-        o = tvm.nd.array(np.zeros((batch_size, width // stride_h, height // stride_h, out_channels), dtype=dtype), ctx)
-        oo = tvm.nd.array(np.zeros((batch_size, width // stride_h, height // stride_h, out_channels), dtype=dtype), ctx)
+    o = tvm.nd.array(np.zeros((batch_size, width // stride_h, height // stride_h, out_channels), dtype=dtype), ctx)
+    oo = tvm.nd.array(np.zeros((batch_size, width // stride_h, height // stride_h, out_channels), dtype=dtype), ctx)
 
-        func(a, w, o)
+    func(a, w, o)
 
-        tensorize_result = o.asnumpy()
+    tensorize_result = o.asnumpy()
 
-        # evaluate
-        evaluator = func.time_evaluator(func.entry_name, ctx, number=3, repeat=10)
-        # print("My Convolution with tensorize: %f ms" % (evaluator(a, w, o).mean * 1e3))
-
-        print(evaluator(a, w, o).mean * 1e3)
+    # evaluate
+    evaluator = func.time_evaluator(func.entry_name, ctx, number=3, repeat=10)
+    print(evaluator(a, w, o).mean * 1e3)
 
