@@ -86,7 +86,7 @@ typedef float M_TYPE;
     end = info[level_][2]
 
     for k in range(begin, end + 1):
-        if suffix_name_fct == "2" and "y" in old_file[k] and "+ " + str(out_h1) in old_file[k]:
+        if suffix_name_fct == "2" and "for" in old_file[k] and "y" in old_file[k] and "+ " + str(out_h1) in old_file[k]:
             f.write(old_file[k].replace("+ " + str(out_h1), ""))
         else:
             f.write(old_file[k])
@@ -367,6 +367,8 @@ def find_fuse(structure, level, order):
     """
     fuse = []
     fuse_int = []
+    nb_iteration = 0
+    nb_iteration_fuse = []
     for k in range(level - 1):
         begin = structure[k + 1][4][1]
         end = structure[k + 1][4][2]
@@ -374,17 +376,21 @@ def find_fuse(structure, level, order):
         no_useless = (end - begin) // split != 1
         if "in_channels" not in order[k]:
             fuse_int += [order[k]]
+            nb_iteration += (end - begin) // split
         else:
             fuse += [fuse_int]
+            nb_iteration_fuse += [nb_iteration]
             fuse_int = []
+            nb_iteration = 0
     if len(fuse) == 0:
         return fuse_int
     maxi = 0
     id_max = 0
     for k in range(len(fuse)):
-        if len(fuse[k]) > maxi:
-            maxi = len(fuse[k])
+        if nb_iteration_fuse[k] > maxi:
+            maxi = nb_iteration_fuse[k]
             id_max = k
+    #print(fuse[k])
     return fuse[k]
 
 def order(o, suffix=""):
@@ -606,6 +612,8 @@ def parser(name):
             "factor_out_channels": factor("f", structure1, level1),
             "factor_xx": factor("x", structure1, level1),
             "factor_yy": factor("y", structure1, level1),
+            "factor_h": factor("h", structure1, level1),
+            "factor_w": factor("w", structure1, level1),
             "factor_in_channels": factor("c", structure1, level1),
             "order": order1,
             "nb_loop_no_tensorize": level1 ,
