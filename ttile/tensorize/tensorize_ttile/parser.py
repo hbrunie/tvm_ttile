@@ -390,7 +390,6 @@ def find_fuse(structure, level, order):
         if nb_iteration_fuse[k] > maxi:
             maxi = nb_iteration_fuse[k]
             id_max = k
-    #print(fuse[k])
     return fuse[k]
 
 def order(o, suffix=""):
@@ -423,7 +422,7 @@ def order(o, suffix=""):
 
     return order
 
-def parser(name):
+def parser(name, stride):
 
     """
     Function which parse C file to create new C files for tensorize
@@ -496,19 +495,16 @@ def parser(name):
     f = replace(f, "(F * Y)", "strideO1")
     f = replace(f, "((F * C) * H)", "strideW1")
     f = replace(f, "(F * C)", "strideW2")
-    f = replace(f, "(C * (Y + H - 1))", "strideA1")
+
+    if stride == 1:
+        f = replace(f, "(C * (Y + H - 1))", "strideA1")
+    else:
+        f = replace(f, "(C * (2 * Y + H - 1))", "strideA1")
     f = replace(f, "C", "strideA2")
     f = replace(f, "F * c", "strideW3 * c")
     f = replace(f, "F", "strideO2")
 
     number_of_file, f1, structure1, f2, structure2 = compute_structure(f)
-
-    # for t in structure1:
-    #     print(t)
-    # for t in structure2:
-    #     print(t)
-
-    # print(info_order)
 
     if number_of_file == 1:
         level1 = write_c_file("tensorize_files/" + name + ".c", structure1[1][1], f1, structure1)
@@ -599,8 +595,6 @@ def parser(name):
 
         level1, structure1 = write_c_file_special_case("tensorize_files/" + name + ".c", structure1[1][1], f1, structure1, level_to_tensorize)
 
-        # for u in structure1:
-        #     print("la", u)
         # information for tensorize i.e. factor of tilling
         info_tensorize = {}
 
@@ -627,11 +621,4 @@ def parser(name):
             "fuse": find_fuse(structure1, level1, order1),
         }
 
-
-
-    # print("####")
-    # for i in [1]:
-    #     for key in info_tensorize[i]:
-    #         print(key, info_tensorize[i][key])
-    # print("####")
     return info_tensorize

@@ -71,7 +71,6 @@ def conv_impl(name_file, number_of_file):
 
 def intrin_conv(name_function, W, H, C, F, X, Y, stride_w, stride_h):
 
-    print(name_function, W, H, C, F, X, Y, stride_w, stride_h)
 
     """
     W = kernel_w,
@@ -81,8 +80,10 @@ def intrin_conv(name_function, W, H, C, F, X, Y, stride_w, stride_h):
     X = width,
     Y = height
     """
-    # a = te.placeholder((1, X * stride_w + W - 1, Y * stride_h + H - 1, C), name="a")
-    a = te.placeholder((1, X  + W - 1, Y  + H - 1, C), name="a")
+    if stride_h == 1:
+        a = te.placeholder((1, X  + W - 1, Y  + H - 1, C), name="a")
+    else:
+        a = te.placeholder((1, X * stride_w + W - 2, Y * stride_h + H - 2, C), name="a")
     w = te.placeholder((W, H, C, F), name="w")
 
     axe_in_channels = te.reduce_axis((0, C), name="axe_in_channels")
@@ -111,9 +112,6 @@ def intrin_conv(name_function, W, H, C, F, X, Y, stride_w, stride_h):
     Ww = tvm.tir.decl_buffer(w.shape, w.dtype, name="W", offset_factor=1, strides=[strideB1, strideB2, strideB3, 1])
     Oo = tvm.tir.decl_buffer(o.shape, o.dtype, name="O", offset_factor=1, strides=[strideC1, strideC2, strideC3, 1])
 
-    # print("a", a.shape)
-    # print("w", w.shape)
-    # print("o", o.shape)
 
     def intrin_func(ins, outs):
         aa, ww = ins
@@ -218,21 +216,22 @@ def conv2d_ttile_1kernel(name, batch_size, width, height, kernel_w, kernel_h, in
 
     s[Out].reorder(*order1)
 
-    # print(tvm.lower(s, [A, W, Out], simple_mode=True))
 
     fuse1 = info_tile[1]["fuse"]
 
-    try:
-        fuse_loop1 = s[Out].fuse(locals()[fuse1[0]], locals()[fuse1[1]])
-        for k in range(2, len(fuse1)):
-            try: 
-                fuse_loop1 = s[Out].fuse(fuse_loop1, locals()[fuse1[k]])
-            except:
-                continue
-    except:
-        fuse_loop1 = locals()[fuse1[0]]
+    if len(fuse1) != 0:
 
-    s[Out].parallel(fuse_loop1)
+        try:
+            fuse_loop1 = s[Out].fuse(locals()[fuse1[0]], locals()[fuse1[1]])
+            for k in range(2, len(fuse1)):
+                try: 
+                    fuse_loop1 = s[Out].fuse(fuse_loop1, locals()[fuse1[k]])
+                except:
+                    continue
+        except:
+            fuse_loop1 = locals()[fuse1[0]]
+
+        s[Out].parallel(fuse_loop1)
 
     conv1 = intrin_conv("gen_conv", info_tile[1]["w_t"], info_tile[1]["h_t"], info_tile[1]["c_t"], info_tile[1]["f_t"], info_tile[1]["x_t"], info_tile[1]["y_t"], stride_w, stride_h)
 
@@ -263,7 +262,6 @@ def conv2d_ttile_2kernel(name, batch_size, width, height, kernel_w, kernel_h, in
     out_h2 = info_tile[2]["height"]
 
 
-    # print(out_h, out_w, out_h1, out_h2)
     size_h1 = info_tile[1]["height"] 
     size_h2 = info_tile[2]["height"] 
 
@@ -298,9 +296,6 @@ def conv2d_ttile_2kernel(name, batch_size, width, height, kernel_w, kernel_h, in
 
     Out = assign_output(Out1, Out2)
 
-    # print("A", A.shape)
-    # print("W", W.shape)
-    # print("O", Out.shape)
 
     s = te.create_schedule(Out.op)
 
@@ -344,7 +339,6 @@ def conv2d_ttile_2kernel(name, batch_size, width, height, kernel_w, kernel_h, in
     order_string1 = info_tile[1]["order"]
     order_string2 = info_tile[2]["order"]
 
-    # print(order_string1)
 
     order1 = [locals()["axe_batch1_0"]]
     for k in order_string1:
@@ -358,34 +352,37 @@ def conv2d_ttile_2kernel(name, batch_size, width, height, kernel_w, kernel_h, in
     s[Out1].reorder(*order1)
     s[Out2].reorder(*order2)
 
-    # print(tvm.lower(s, [A, W, Out], simple_mode=True))
 
     fuse1 = info_tile[1]["fuse"]
     fuse2 = info_tile[2]["fuse"]
 
-    try:
-        fuse_loop1 = s[Out1].fuse(locals()[fuse1[0]], locals()[fuse1[1]])
-        for k in range(2, len(fuse1)):
-            try: 
-                fuse_loop1 = s[Out1].fuse(fuse_loop1, locals()[fuse1[k]])
-            except:
-                continue
-    except:
-        fuse_loop1 = locals()[fuse1[0]]
+    if len(fuse1) != 0:
 
-    try:
-        fuse_loop2 = s[Out2].fuse(locals()[fuse2[0]], locals()[fuse2[1]])
-        for k in range(2, len(fuse2)):
-            try: 
-                fuse_loop1 = s[Out1].fuse(fuse_loop2, locals()[fuse2[k]])
-            except:
-                continue
-    except:
-        fuse_loop2= locals()[fuse2[0]]
+        try:
+            fuse_loop1 = s[Out1].fuse(locals()[fuse1[0]], locals()[fuse1[1]])
+            for k in range(2, len(fuse1)):
+                try: 
+                    fuse_loop1 = s[Out1].fuse(fuse_loop1, locals()[fuse1[k]])
+                except:
+                    continue
+        except:
+            fuse_loop1 = locals()[fuse1[0]]
 
-    
-    s[Out1].parallel(fuse_loop1)
-    s[Out2].parallel(fuse_loop2)
+        s[Out1].parallel(fuse_loop1)
+
+    if len(fuse2) != 0:
+
+        try:
+            fuse_loop2 = s[Out2].fuse(locals()[fuse2[0]], locals()[fuse2[1]])
+            for k in range(2, len(fuse2)):
+                try: 
+                    fuse_loop1 = s[Out1].fuse(fuse_loop2, locals()[fuse2[k]])
+                except:
+                    continue
+        except:
+            fuse_loop2= locals()[fuse2[0]]
+
+        s[Out2].parallel(fuse_loop2)
 
     conv1 = intrin_conv("gen_conv1", info_tile[1]["w_t"], info_tile[1]["h_t"], info_tile[1]["c_t"], info_tile[1]["f_t"], info_tile[1]["x_t"], info_tile[1]["y_t"], stride_w, stride_h)
     conv2 = intrin_conv("gen_conv2", info_tile[2]["w_t"], info_tile[2]["h_t"], info_tile[2]["c_t"], info_tile[2]["f_t"], info_tile[2]["x_t"], info_tile[2]["y_t"], stride_w, stride_h)
@@ -427,8 +424,8 @@ if __name__ == '__main__':
         # os.system(f"""(cd {HOME}/matmul_bench/ml_utils && dune exec ./stephane_search.exe)""")
         # os.system(f"""cp {HOME}/matmul_bench/c_bench/gen/gen_conv.c {HOME}/tvm_ttile/ttile/tensorize/tensorize_ttile/c_files/{name_conv}.c""")
 
-        #try:
-        if True:
+        try:
+        # if True:
 
             out_channels, in_channels, height, width, kernel_h, kernel_w, stride_h, stride_w = input_conv.input_conv[name_conv]
             batch_size = 1
@@ -444,10 +441,8 @@ if __name__ == '__main__':
             ctx = tvm.context(target)
             dtype = "float32"
 
-            info_tile = parser.parser(name_conv)
-            print(info_tile)
+            info_tile = parser.parser(name_conv, stride_h)
 
-            #print(info_tile)
 
             if len(info_tile) == 1:
                 s, I = conv2d_ttile_1kernel(name_conv, batch_size, width, height, kernel_w, kernel_h, in_channels, out_channels, info_tile, stride_w, stride_h)
@@ -472,7 +467,6 @@ if __name__ == '__main__':
 
             # evaluate
             evaluator = func.time_evaluator(func.entry_name, ctx, number=3, repeat=10)
-            # print("My Convolution with tensorize: %f ms" % (evaluator(a, w, o).mean * 1e3))
 
             results = [(evaluator(a, w, o).mean * 1e3)]
             #check result
@@ -491,15 +485,7 @@ if __name__ == '__main__':
 
             output_conv2d_test = oo.asnumpy()
 
-            for b in range(1):
-                
-                for w in range(width):
-                    for f in range(out_channels):
-                        for h in range(height):
-                            print(b, h, w, f, output_conv2d_test[b,h,w,f], tensorize_result[b,h,w,f])
-
             tvm.testing.assert_allclose(tensorize_result, output_conv2d_test, rtol=1e-5)
-            # print(results)
 
             for k in range(19):
                 results += [float(os.popen("python3.8 run.py " + name_conv + " " + archi).read())]
@@ -523,8 +509,10 @@ if __name__ == '__main__':
                 os.system("cp tensorize_files/" + name_conv + "1.c old_c_files/" + name_conv + "1_tensorize__" + str(runs) + ".c" )
                 os.system("cp tensorize_files/" + name_conv + "2.c old_c_files/" + name_conv + "2_tensorize__" + str(runs) + ".c" )
 
-        #except:
-        else:
+            os.system("python3.8 main_tvm.py " + name_conv + " " + archi + " " + str(runs))
+
+        except:
+        # else:
             tt = open("faux.csv", "a")
             tt.write(name_conv + " " + str(runs) + "\n")
             tt.close()

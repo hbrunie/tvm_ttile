@@ -12,156 +12,6 @@ import os
 # HOME = "/root"
 HOME = "/home/colo"
 
-def generate_ttile_conv2d(name_file, number_of_file):
-
-    cc_code_begin = """
-extern "C" {
-    """
-
-    if number_of_file == 1:
-        file_ = open("tensorize_files/" + name_file + ".c", "r")
-        cc_code_midle = file_.read()
-        file_.close()
-    else:
-        file_ = open("tensorize_files/" + name_file + "1.c", "r")
-        cc_code_midle1 = file_.read()
-        file_.close()
-        file_ = open("tensorize_files/" + name_file + "2.c", "r")
-        cc_code_midle2 = file_.read()
-        file_.close()
-        cc_code_midle = cc_code_midle1 + cc_code_midle2
-
-
-    cc_code_end = """
-    void ttile_conv2d_reset(float * Output, int F, int X, int Y, int strideO1, int strideO2) {
-        /*
-        Simple Convolution
-
-        Inputs:
-            - Output: Output
-            - F: out_channels
-            - X: width
-            - Y: height
-
-        */
-        for (int f=0; f<F; f++){
-            for (int y=0; y<Y; y++){
-                for (int x=0; x<X; x++){
-                    Output[x*strideO1 + y*strideO2 + f] = 0.0;
-                }
-            }
-        }
-        return;
-    }
-}
-    """
-    cc_code = cc_code_begin + cc_code_midle + cc_code_end
-    return cc_code
-
-def conv_impl(name_file, number_of_file):
-    cc_code = generate_ttile_conv2d(name_file, number_of_file)
-    from tvm.contrib import utils, clang
-
-    temp = utils.tempdir()
-    ll_path = temp.relpath("temp.ll")
-    options = option_compilation
-    # Create LLVM ir from c source code
-    ll_code = clang.create_llvm(cc_code, output=ll_path, options=options)
-    return ll_code
-
-def intrin_conv(name_function, W, H, C, F, X, Y, stride_w, stride_h):
-
-    """
-    W = kernel_w,
-    H = kernel_h,
-    C = in_channels,
-    F = out_channels,
-    X = width,
-    Y = height
-    """
-    # a = te.placeholder((1, X * stride_w + W - 1, Y * stride_h + H - 1, C), name="a")
-    a = te.placeholder((1, X  + W - 1, Y  + H - 1, C), name="a")
-    w = te.placeholder((W, H, C, F), name="w")
-
-    axe_in_channels = te.reduce_axis((0, C), name="axe_in_channels")
-    axe_kernel_h = te.reduce_axis((0, H), name="axe_kernel_h")
-    axe_kernel_w = te.reduce_axis((0, W), name="axe_kernel_w")
-
-    strideA1 = tvm.te.var("sA1")
-    strideA2 = tvm.te.var("sA2")
-    strideA3 = tvm.te.var("sA3")
-
-    strideB1 = tvm.te.var("sB1")
-    strideB2 = tvm.te.var("sB2")
-    strideB3 = tvm.te.var("sB3")
-
-    strideC1 = tvm.te.var("sC1")
-    strideC2 = tvm.te.var("sC2")
-    strideC3 = tvm.te.var("sC3")
-
-    o = te.compute(
-    (1, X, Y, F),
-    lambda batch, xx, yy, out_channels: te.sum(
-        a[batch, stride_w * xx + axe_kernel_w, stride_h * yy + axe_kernel_h, axe_in_channels]* w[axe_kernel_w, axe_kernel_h, axe_in_channels, out_channels ],
-        axis=[axe_in_channels, axe_kernel_h, axe_kernel_w],)
-    )
-    Ab = tvm.tir.decl_buffer(a.shape, a.dtype, name="A", offset_factor=1, strides=[strideA1, strideA2, strideA3, 1])
-    Ww = tvm.tir.decl_buffer(w.shape, w.dtype, name="W", offset_factor=1, strides=[strideB1, strideB2, strideB3, 1])
-    Oo = tvm.tir.decl_buffer(o.shape, o.dtype, name="O", offset_factor=1, strides=[strideC1, strideC2, strideC3, 1])
-
-    def intrin_func(ins, outs):
-        aa, ww = ins
-        cc = outs[0]
-
-
-        def _body():
-            ib = tvm.tir.ir_builder.create()
-            ib.emit(
-                tvm.tir.call_extern(
-                    "float32",
-                    name_function,
-                    cc.access_ptr("w"),
-                    aa.access_ptr("r"),
-                    ww.access_ptr("r"),
-                    X,
-                    W,
-                    Y,
-                    H,
-                    C,
-                    F,
-                    cc.strides[1],
-                    cc.strides[2],
-                    aa.strides[1],
-                    aa.strides[2],
-                    ww.strides[0],
-                    ww.strides[1],
-                    ww.strides[2],
-                )
-            )
-            return ib.get()
-
-        def _reduce_reset():
-            ib = tvm.tir.ir_builder.create()
-            ib.emit(
-                tvm.tir.call_extern(
-                    "float32",
-                    "ttile_conv2d_reset",
-                    cc.access_ptr("w"),
-                    F,
-                    X,
-                    Y,
-                    cc.strides[1],
-                    cc.strides[2],
-                )
-            )
-            return ib.get()
-
-        def _reduce_update():
-            return _body()
-
-        return _body(), _reduce_reset(), _reduce_update()
-
-    return te.decl_tensor_intrin(o.op, intrin_func, binds={a: Ab, w: Ww, o: Oo})
 
 def conv2d_ttile_1kernel(name, batch_size, width, height, kernel_w, kernel_h, in_channels, out_channels, info_tile, stride_w, stride_h):
     A = te.placeholder((batch_size, width + kernel_w - 1, height + kernel_h - 1, in_channels), name="A")
@@ -230,10 +80,10 @@ def conv2d_ttile_1kernel(name, batch_size, width, height, kernel_w, kernel_h, in
 
         s[Out].parallel(fuse_loop1)
 
-    conv1 = intrin_conv("gen_conv", info_tile[1]["w_t"], info_tile[1]["h_t"], info_tile[1]["c_t"], info_tile[1]["f_t"], info_tile[1]["x_t"], info_tile[1]["y_t"], stride_w, stride_h)
+    s[Out].unroll(order1[-2])
+    s[Out].unroll(order1[-1])
+    s[Out].vectorize(order1[-1])
 
-    s[Out].tensorize(locals()[info_tile[1]["axe_to_tensorize"]], conv1)
-    s[Out].pragma(locals()["axe_batch_0"], "import_llvm", conv_impl(name, len(info_tile)))
 
 
     return s, [A, W, Out]
@@ -291,6 +141,7 @@ def conv2d_ttile_2kernel(name, batch_size, width, height, kernel_w, kernel_h, in
     # tester si avec deux A c'est mieux ou pas
 
     Out = assign_output(Out1, Out2)
+
 
     s = te.create_schedule(Out.op)
 
@@ -379,13 +230,13 @@ def conv2d_ttile_2kernel(name, batch_size, width, height, kernel_w, kernel_h, in
 
         s[Out2].parallel(fuse_loop2)
 
-    conv1 = intrin_conv("gen_conv1", info_tile[1]["w_t"], info_tile[1]["h_t"], info_tile[1]["c_t"], info_tile[1]["f_t"], info_tile[1]["x_t"], info_tile[1]["y_t"], stride_w, stride_h)
-    conv2 = intrin_conv("gen_conv2", info_tile[2]["w_t"], info_tile[2]["h_t"], info_tile[2]["c_t"], info_tile[2]["f_t"], info_tile[2]["x_t"], info_tile[2]["y_t"], stride_w, stride_h)
+    s[Out1].unroll(order1[-2])
+    s[Out1].unroll(order1[-1])
+    s[Out1].vectorize(order1[-1])
 
-    s[Out1].tensorize(locals()[info_tile[1]["axe_to_tensorize"]], conv1)
-    s[Out1].pragma(locals()["axe_batch1_0"], "import_llvm", conv_impl(name, len(info_tile)))
-
-    s[Out2].tensorize(locals()[info_tile[2]["axe_to_tensorize"]], conv2)
+    s[Out2].unroll(order2[-2])
+    s[Out2].unroll(order2[-1])
+    s[Out2].vectorize(order2[-1])
 
     # print(tvm.lower(s, [A, W, Out], simple_mode=True))
 
