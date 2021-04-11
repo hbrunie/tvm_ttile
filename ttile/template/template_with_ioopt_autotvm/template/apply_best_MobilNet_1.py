@@ -16,20 +16,20 @@ target = "llvm -mcpu=core-avx2"
 ctx = tvm.context(target)
 dtype="float32"
 
-batch_size = 1
-height = yy = 112
-width = xx = 112
-in_channels = 32
+batch_size   = 1
+height = yy  = 112
+width = xx   = 112
+in_channels  = 32
 out_channels = 32
-kernel_h = 3
-kernel_w = 3
-stride_h = 1
-stride_w = 1
+kernel_h     = 3
+kernel_w     = 3
+stride_h     = 1
+stride_w     = 1
 
 size_in_channels_kernel  = 1
 size_out_channels_kernel = 32
-size_xx_kernel    = 1
-size_yy_kernel   = 1
+size_xx_kernel           = 1
+size_yy_kernel           = 1
 size_kernel_h_kernel     = 3
 size_kernel_w_kernel     = 3
 

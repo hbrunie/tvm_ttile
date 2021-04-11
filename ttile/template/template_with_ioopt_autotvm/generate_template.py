@@ -52,22 +52,22 @@ target = \"{target}\"
 ctx = tvm.context(target)
 dtype="float32"
 
-batch_size = {batch_size}
-height = yy = {height}
-width = xx = {width}
-in_channels = {in_channels}
+batch_size   = {batch_size}
+height = yy  = {height}
+width = xx   = {width}
+in_channels  = {in_channels}
 out_channels = {out_channels}
-kernel_h = {kernel_h}
-kernel_w = {kernel_w}
-stride_h = {stride_h}
-stride_w = {stride_w}
+kernel_h     = {kernel_h}
+kernel_w     = {kernel_w}
+stride_h     = {stride_h}
+stride_w     = {stride_w}
 
-size_in_channels_kernel  = {size_kernel.size_kernel()["in_channels_kernel"]}
-size_out_channels_kernel = {size_kernel.size_kernel()["out_channels_kernel"]}
-size_xx_kernel    = {size_kernel.size_kernel()["xx_kernel"]}
-size_yy_kernel   = {size_kernel.size_kernel()["yy_kernel"]}
-size_kernel_h_kernel     = {size_kernel.size_kernel()["kernel_h_kernel"]}
-size_kernel_w_kernel     = {size_kernel.size_kernel()["kernel_w_kernel"]}
+size_in_channels_kernel  = {size_kernel.size_kernel(name_input.replace("-", "_"), archi)["in_channels_kernel"]}
+size_out_channels_kernel = {size_kernel.size_kernel(name_input.replace("-", "_"), archi)["out_channels_kernel"]}
+size_xx_kernel           = {size_kernel.size_kernel(name_input.replace("-", "_"), archi)["xx_kernel"]}
+size_yy_kernel           = {size_kernel.size_kernel(name_input.replace("-", "_"), archi)["yy_kernel"]}
+size_kernel_h_kernel     = {size_kernel.size_kernel(name_input.replace("-", "_"), archi)["kernel_h_kernel"]}
+size_kernel_w_kernel     = {size_kernel.size_kernel(name_input.replace("-", "_"), archi)["kernel_w_kernel"]}
 
     """)
 
@@ -310,22 +310,22 @@ target = \"{target}\"
 ctx = tvm.context(target)
 dtype="float32"
 
-batch_size = {batch_size}
-height = yy = {height}
-width = xx = {width}
-in_channels = {in_channels}
+batch_size   = {batch_size}
+height = yy  = {height}
+width = xx   = {width}
+in_channels  = {in_channels}
 out_channels = {out_channels}
-kernel_h = {kernel_h}
-kernel_w = {kernel_w}
-stride_h = {stride_h}
-stride_w = {stride_w}
+kernel_h     = {kernel_h}
+kernel_w     = {kernel_w}
+stride_h     = {stride_h}
+stride_w     = {stride_w}
 
-size_in_channels_kernel  = {size_kernel.size_kernel()["in_channels_kernel"]}
-size_out_channels_kernel = {size_kernel.size_kernel()["out_channels_kernel"]}
-size_xx_kernel    = {size_kernel.size_kernel()["xx_kernel"]}
-size_yy_kernel   = {size_kernel.size_kernel()["yy_kernel"]}
-size_kernel_h_kernel     = {size_kernel.size_kernel()["kernel_h_kernel"]}
-size_kernel_w_kernel     = {size_kernel.size_kernel()["kernel_w_kernel"]}
+size_in_channels_kernel  = {size_kernel.size_kernel(name_input.replace("-", "_"), archi)["in_channels_kernel"]}
+size_out_channels_kernel = {size_kernel.size_kernel(name_input.replace("-", "_"), archi)["out_channels_kernel"]}
+size_xx_kernel           = {size_kernel.size_kernel(name_input.replace("-", "_"), archi)["xx_kernel"]}
+size_yy_kernel           = {size_kernel.size_kernel(name_input.replace("-", "_"), archi)["yy_kernel"]}
+size_kernel_h_kernel     = {size_kernel.size_kernel(name_input.replace("-", "_"), archi)["kernel_h_kernel"]}
+size_kernel_w_kernel     = {size_kernel.size_kernel(name_input.replace("-", "_"), archi)["kernel_w_kernel"]}
 
     """)
 
