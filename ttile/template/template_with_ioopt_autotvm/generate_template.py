@@ -22,7 +22,7 @@ convert_name = {
 
 def generate_template(name_input, id_, target, archi):
 
-    f = open("template/template_" + name_input.replace("-", "_") + ".py", "w")
+    f = open("template/template_" + name_input.replace("-", "_") + "_" + str(id_) + ".py", "w")
 
     name_input_ = name_input.replace("-", "_")
 
@@ -46,7 +46,7 @@ from tvm.topi.utils import get_const_tuple
 """)
 
     f.write(f"""
-log_file = "log/autotvm_conv2d_{name_input}.log"
+log_file = "log/autotvm_conv2d_{name_input}_{id_}.log"
 target = \"{target}\"
 ctx = tvm.context(target)
 dtype="float32"
@@ -72,8 +72,8 @@ size_kernel_w_kernel     = {kernel_size["kernel_w_kernel"]}
 
     #function
     f.write(f"""
-@autotvm.template("conv2d_ttile_{name_input_}")
-def conv2d_ttile_{name_input_}(batch_size, height, width, in_channels, out_channels, kernel_h, kernel_w, stride_h, stride_w):
+@autotvm.template("conv2d_ttile_{name_input_}_{id_}")
+def conv2d_ttile_{name_input_}_{id_}(batch_size, height, width, in_channels, out_channels, kernel_h, kernel_w, stride_h, stride_w):
     A = te.placeholder((batch_size, width + kernel_w - 1, height + kernel_h - 1, in_channels), name="A")
     W = te.placeholder((kernel_w, kernel_h, in_channels, out_channels), name="W")
 
@@ -191,7 +191,7 @@ def evaluate():
     except FileExistsError:
         pass
 
-    task = autotvm.task.create("conv2d_ttile_{name_input_}", args=(batch_size, height, width, in_channels, out_channels, kernel_h, kernel_w, stride_h, stride_w), target=target)
+    task = autotvm.task.create("conv2d_ttile_{name_input_}_{id_}", args=(batch_size, height, width, in_channels, out_channels, kernel_h, kernel_w, stride_h, stride_w), target=target)
     print(task.config_space)
     print(task.flop)
 
@@ -217,7 +217,7 @@ def evaluate():
 
     with autotvm.apply_history_best(log_file):
         with tvm.target.Target(target):
-            s, arg_bufs = conv2d_ttile_{name_input_}(batch_size, height, width, in_channels, out_channels, kernel_h, kernel_w, stride_h, stride_w)
+            s, arg_bufs = conv2d_ttile_{name_input_}_{id_}(batch_size, height, width, in_channels, out_channels, kernel_h, kernel_w, stride_h, stride_w)
             f = tvm.build(s, arg_bufs)
 
     out_height = height // stride_h 
@@ -260,7 +260,7 @@ def evaluate():
 
 
     for k in range(19):
-        time += [float(os.popen("python3 template/apply_best_{name_input.replace("-", "_")}.py").read())]
+        time += [float(os.popen("python3 template/apply_best_{name_input.replace("-", "_")}_{id_}.py").read())]
 
     for k in range(5):
         time.remove(max(time))
@@ -270,7 +270,7 @@ def evaluate():
     std = np.std(time)
 
     f = open("result.txt", "a")
-    f.write("{name_input.replace("-", "_")} " + str(result) + " " + str(std) + "\\n")
+    f.write("{id_};" + "{name_input.replace("-", "_")};" + str(result) + ";" + str(std) + "\\n")
     f.close()
 
 
@@ -281,7 +281,7 @@ def evaluate():
 
 def generate_apply_best(name_input, id_, target, archi):
 
-    f = open("template/apply_best_" + name_input.replace("-", "_") + ".py", "w")
+    f = open("template/apply_best_" + name_input.replace("-", "_") + "_" + str(id_) + ".py", "w")
 
     name_input_ = name_input.replace("-", "_")
 
@@ -305,7 +305,7 @@ from tvm.topi.utils import get_const_tuple
 """)
 
     f.write(f"""
-log_file = "log/autotvm_conv2d_{name_input}.log"
+log_file = "log/autotvm_conv2d_{name_input}_{id_}.log"
 target = \"{target}\"
 ctx = tvm.context(target)
 dtype="float32"
@@ -331,8 +331,8 @@ size_kernel_w_kernel     = {kernel_size["kernel_w_kernel"]}
 
     #function
     f.write(f"""
-@autotvm.template("conv2d_ttile_{name_input_}")
-def conv2d_ttile_{name_input_}(batch_size, height, width, in_channels, out_channels, kernel_h, kernel_w, stride_h, stride_w):
+@autotvm.template("conv2d_ttile_{name_input_}_{id_}")
+def conv2d_ttile_{name_input_}_{id_}(batch_size, height, width, in_channels, out_channels, kernel_h, kernel_w, stride_h, stride_w):
     A = te.placeholder((batch_size, width + kernel_w - 1, height + kernel_h - 1, in_channels), name="A")
     W = te.placeholder((kernel_w, kernel_h, in_channels, out_channels), name="W")
 
@@ -450,7 +450,7 @@ def evaluate():
 
     with autotvm.apply_history_best(log_file):
         with tvm.target.Target(target):
-            s, arg_bufs = conv2d_ttile_{name_input_}(batch_size, height, width, in_channels, out_channels, kernel_h, kernel_w, stride_h, stride_w)
+            s, arg_bufs = conv2d_ttile_{name_input_}_{id_}(batch_size, height, width, in_channels, out_channels, kernel_h, kernel_w, stride_h, stride_w)
             f = tvm.build(s, arg_bufs)
 
     out_height = height // stride_h 
