@@ -1,6 +1,5 @@
 import input_conv
 import reorder
-import size_kernel
 
 convert_axe = {
     "f": "axe_out_channels",
@@ -21,7 +20,7 @@ convert_name = {
 }
 
 
-def generate_template(name_input, target, archi):
+def generate_template(name_input, id_, target, archi):
 
     f = open("template/template_" + name_input.replace("-", "_") + ".py", "w")
 
@@ -30,7 +29,7 @@ def generate_template(name_input, target, archi):
     batch_size = 1
     out_channels, in_channels, height, width, kernel_h, kernel_w, stride_h, stride_w = input_conv.input_conv[name_input]
 
-    lorder, cpu, l1, l2, fuse = reorder.reorder(name_input, archi)
+    lorder, l1, l2, mem, fuse, kernel_size = reorder.reorder(name_input, id_, archi)
     #headers
     f.write("""
 import os
@@ -62,12 +61,12 @@ kernel_w     = {kernel_w}
 stride_h     = {stride_h}
 stride_w     = {stride_w}
 
-size_in_channels_kernel  = {size_kernel.size_kernel(name_input.replace("-", "_"), archi)["in_channels_kernel"]}
-size_out_channels_kernel = {size_kernel.size_kernel(name_input.replace("-", "_"), archi)["out_channels_kernel"]}
-size_xx_kernel           = {size_kernel.size_kernel(name_input.replace("-", "_"), archi)["xx_kernel"]}
-size_yy_kernel           = {size_kernel.size_kernel(name_input.replace("-", "_"), archi)["yy_kernel"]}
-size_kernel_h_kernel     = {size_kernel.size_kernel(name_input.replace("-", "_"), archi)["kernel_h_kernel"]}
-size_kernel_w_kernel     = {size_kernel.size_kernel(name_input.replace("-", "_"), archi)["kernel_w_kernel"]}
+size_in_channels_kernel  = {kernel_size["in_channels_kernel"]}
+size_out_channels_kernel = {kernel_size["out_channels_kernel"]}
+size_xx_kernel           = {kernel_size["xx_kernel"]}
+size_yy_kernel           = {kernel_size["yy_kernel"]}
+size_kernel_h_kernel     = {kernel_size["kernel_h_kernel"]}
+size_kernel_w_kernel     = {kernel_size["kernel_w_kernel"]}
 
     """)
 
@@ -122,7 +121,7 @@ def conv2d_ttile_{name_input_}(batch_size, height, width, in_channels, out_chann
         """)
         deja_vu.add(name_axe_o)
         deja_vu.add(name_axe_i)
-
+    print(l1)
     for k in l1:
         name_axe_i = k
         id = int(k.split("_")[-1]) + 1
@@ -138,20 +137,20 @@ def conv2d_ttile_{name_input_}(batch_size, height, width, in_channels, out_chann
         deja_vu.add(name_axe_o)
         deja_vu.add(name_axe_i)
 
-    for k in cpu:
-        name_axe_i = k
-        id = int(k.split("_")[-1]) + 1
-        name_axe_o = "_".join(k.split("_")[:-1]) + "_" + str(id)
-        if name_axe_o in deja_vu:
-            f.write(f"""
-    {name_axe_o}, {name_axe_i} = s[Out].split({name_axe_o}, size_{"_".join(k.split("_")[1:-1])}_kernel)
-            """)
-        else:
-            f.write(f"""
-    {name_axe_o}, {name_axe_i} = s[Out].split({"_".join(k.split("_")[:-1])}, size_{"_".join(k.split("_")[1:-1])}_kernel)
-            """)
-        deja_vu.add(name_axe_o)
-        deja_vu.add(name_axe_i)
+    # for k in cpu:
+    #     name_axe_i = k
+    #     id = int(k.split("_")[-1]) + 1
+    #     name_axe_o = "_".join(k.split("_")[:-1]) + "_" + str(id)
+    #     if name_axe_o in deja_vu:
+    #         f.write(f"""
+    # {name_axe_o}, {name_axe_i} = s[Out].split({name_axe_o}, size_{"_".join(k.split("_")[1:-1])}_kernel)
+    #         """)
+    #     else:
+    #         f.write(f"""
+    # {name_axe_o}, {name_axe_i} = s[Out].split({"_".join(k.split("_")[:-1])}, size_{"_".join(k.split("_")[1:-1])}_kernel)
+    #         """)
+    #     deja_vu.add(name_axe_o)
+    #     deja_vu.add(name_axe_i)
 
     
     order = ",".join(lorder)
@@ -280,7 +279,7 @@ def evaluate():
 
 
 
-def generate_apply_best(name_input, target, archi):
+def generate_apply_best(name_input, id_, target, archi):
 
     f = open("template/apply_best_" + name_input.replace("-", "_") + ".py", "w")
 
@@ -288,7 +287,8 @@ def generate_apply_best(name_input, target, archi):
 
     batch_size = 1
     out_channels, in_channels, height, width, kernel_h, kernel_w, stride_h, stride_w = input_conv.input_conv[name_input]
-    lorder, cpu, l1, l2, fuse = reorder.reorder(name_input, archi)
+
+    lorder, l1, l2, mem, fuse, kernel_size = reorder.reorder(name_input, id_, archi)
     #headers
     f.write("""
 import os
@@ -320,12 +320,12 @@ kernel_w     = {kernel_w}
 stride_h     = {stride_h}
 stride_w     = {stride_w}
 
-size_in_channels_kernel  = {size_kernel.size_kernel(name_input.replace("-", "_"), archi)["in_channels_kernel"]}
-size_out_channels_kernel = {size_kernel.size_kernel(name_input.replace("-", "_"), archi)["out_channels_kernel"]}
-size_xx_kernel           = {size_kernel.size_kernel(name_input.replace("-", "_"), archi)["xx_kernel"]}
-size_yy_kernel           = {size_kernel.size_kernel(name_input.replace("-", "_"), archi)["yy_kernel"]}
-size_kernel_h_kernel     = {size_kernel.size_kernel(name_input.replace("-", "_"), archi)["kernel_h_kernel"]}
-size_kernel_w_kernel     = {size_kernel.size_kernel(name_input.replace("-", "_"), archi)["kernel_w_kernel"]}
+size_in_channels_kernel  = {kernel_size["in_channels_kernel"]}
+size_out_channels_kernel = {kernel_size["out_channels_kernel"]}
+size_xx_kernel           = {kernel_size["xx_kernel"]}
+size_yy_kernel           = {kernel_size["yy_kernel"]}
+size_kernel_h_kernel     = {kernel_size["kernel_h_kernel"]}
+size_kernel_w_kernel     = {kernel_size["kernel_w_kernel"]}
 
     """)
 
@@ -380,7 +380,7 @@ def conv2d_ttile_{name_input_}(batch_size, height, width, in_channels, out_chann
         """)
         deja_vu.add(name_axe_o)
         deja_vu.add(name_axe_i)
-
+    print(l1)
     for k in l1:
         name_axe_i = k
         id = int(k.split("_")[-1]) + 1
@@ -396,20 +396,20 @@ def conv2d_ttile_{name_input_}(batch_size, height, width, in_channels, out_chann
         deja_vu.add(name_axe_o)
         deja_vu.add(name_axe_i)
 
-    for k in cpu:
-        name_axe_i = k
-        id = int(k.split("_")[-1]) + 1
-        name_axe_o = "_".join(k.split("_")[:-1]) + "_" + str(id)
-        if name_axe_o in deja_vu:
-            f.write(f"""
-    {name_axe_o}, {name_axe_i} = s[Out].split({name_axe_o}, size_{"_".join(k.split("_")[1:-1])}_kernel)
-            """)
-        else:
-            f.write(f"""
-    {name_axe_o}, {name_axe_i} = s[Out].split({"_".join(k.split("_")[:-1])}, size_{"_".join(k.split("_")[1:-1])}_kernel)
-            """)
-        deja_vu.add(name_axe_o)
-        deja_vu.add(name_axe_i)
+    # for k in cpu:
+    #     name_axe_i = k
+    #     id = int(k.split("_")[-1]) + 1
+    #     name_axe_o = "_".join(k.split("_")[:-1]) + "_" + str(id)
+    #     if name_axe_o in deja_vu:
+    #         f.write(f"""
+    # {name_axe_o}, {name_axe_i} = s[Out].split({name_axe_o}, size_{"_".join(k.split("_")[1:-1])}_kernel)
+    #         """)
+    #     else:
+    #         f.write(f"""
+    # {name_axe_o}, {name_axe_i} = s[Out].split({"_".join(k.split("_")[:-1])}, size_{"_".join(k.split("_")[1:-1])}_kernel)
+    #         """)
+    #     deja_vu.add(name_axe_o)
+    #     deja_vu.add(name_axe_i)
 
     
     order = ",".join(lorder)
