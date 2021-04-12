@@ -63,10 +63,13 @@ bool ArgBinder::Bind_(const PrimExpr& arg, const PrimExpr& value, const std::str
       }
       return true;
     } else {
+      // std::cout << "ICI " << value << " " << it->second << std::endl;
       BinderAddAssert(&analyzer_, it->second == value, arg_name, &asserts_);
     }
   } else {
-    BinderAddAssert(&analyzer_, arg == value, arg_name, &asserts_);
+    // std::cout << "ICIR " << value << " " << arg << std::endl;
+    // BinderAddAssert(&analyzer_, arg == value, arg_name, &asserts_);
+    //
   }
   return false;
 }
