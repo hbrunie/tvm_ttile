@@ -1,7 +1,7 @@
 import os
 import input_conv
 
-#archi = "avx2"
+# archi = "avx2"
 archi = "avx512"
 
 nb_runs = 200

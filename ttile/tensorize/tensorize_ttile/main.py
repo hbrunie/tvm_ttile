@@ -215,8 +215,6 @@ def conv2d_ttile_1kernel(name, batch_size, width, height, kernel_w, kernel_h, in
 
 
     s[Out].reorder(*order1)
-    print(info_tile)
-    print("order", order_string1)
     fuse1 = info_tile[1]["fuse"]
 
     if len(fuse1) != 0:
@@ -351,7 +349,7 @@ def conv2d_ttile_2kernel(name, batch_size, width, height, kernel_w, kernel_h, in
 
     fuse1 = info_tile[1]["fuse"]
     fuse2 = info_tile[2]["fuse"]
-    print(tvm.lower(s, [A, W, Out], simple_mode=True))
+    # print(tvm.lower(s, [A, W, Out], simple_mode=True))
 
     if len(fuse1) != 0:
         if len(fuse1) > 1:
@@ -381,7 +379,7 @@ def conv2d_ttile_2kernel(name, batch_size, width, height, kernel_w, kernel_h, in
 
     s[Out2].tensorize(locals()[info_tile[2]["axe_to_tensorize"]], conv2)
 
-    print(tvm.lower(s, [A, W, Out], simple_mode=True))
+    # print(tvm.lower(s, [A, W, Out], simple_mode=True))
 
     return s, [A, W, Out]
 
@@ -413,12 +411,12 @@ if __name__ == '__main__':
 
     for runs in range(nb_runs):
 
-        os.system(f"""(cd {HOME}/matmul_bench && python3.8 create.py {name_conv} {archi})""")
+        os.system(f"""(cd {HOME}/matmul_bench && python3 create.py {name_conv} {archi})""")
         os.system(f"""(cd {HOME}/matmul_bench/ml_utils && dune exec ./stephane_search.exe)""")
         os.system(f"""cp {HOME}/matmul_bench/c_bench/gen/gen_conv.c {HOME}/tvm_ttile/ttile/tensorize/tensorize_ttile/c_files/{name_conv}.c""")
 
-        # try:
-        if True:
+        try:
+        # if True:
 
             out_channels, in_channels, height, width, kernel_h, kernel_w, stride_h, stride_w = input_conv.input_conv[name_conv]
             batch_size = 1
@@ -485,7 +483,7 @@ if __name__ == '__main__':
             tvm.testing.assert_allclose(tensorize_result, output_conv2d_test, rtol=1e-5)
 
             for k in range(19):
-                results += [float(os.popen("python3.8 run.py " + name_conv + " " + archi).read())]
+                results += [float(os.popen("python3 run.py " + name_conv + " " + archi).read())]
 
             for k in range(5):
                 results.remove(max(results))
@@ -510,10 +508,10 @@ if __name__ == '__main__':
                 os.system("cp tensorize_files/" + name_conv + "1.c old_c_files/" + name_conv + "1_tensorize__" + str(runs) + ".c" )
                 os.system("cp tensorize_files/" + name_conv + "2.c old_c_files/" + name_conv + "2_tensorize__" + str(runs) + ".c" )
 
-            # os.system("python3.8 main_tvm.py " + name_conv + " " + archi + " " + str(runs))
+            # os.system("python3 main_tvm.py " + name_conv + " " + archi + " " + str(runs))
 
-        # except:
-        else:
+        except:
+        # else:
             tt = open("faux.csv", "a")
             tt.write(name_conv + " " + str(runs) + "\n")
             tt.close()
