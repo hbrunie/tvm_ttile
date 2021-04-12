@@ -217,15 +217,11 @@ def conv2d_ttile_1kernel(name, batch_size, width, height, kernel_w, kernel_h, in
     fuse1 = info_tile[1]["fuse"]
 
     if len(fuse1) != 0:
-
-        try:
+        if len(fuse1) > 1:
             fuse_loop1 = s[Out].fuse(locals()[fuse1[0]], locals()[fuse1[1]])
             for k in range(2, len(fuse1)):
-                try: 
-                    fuse_loop1 = s[Out].fuse(fuse_loop1, locals()[fuse1[k]])
-                except:
-                    continue
-        except:
+                fuse_loop1 = s[Out].fuse(fuse_loop1, locals()[fuse1[k]])
+        else:
             fuse_loop1 = locals()[fuse1[0]]
 
         s[Out].parallel(fuse_loop1)
@@ -352,29 +348,21 @@ def conv2d_ttile_2kernel(name, batch_size, width, height, kernel_w, kernel_h, in
     fuse2 = info_tile[2]["fuse"]
 
     if len(fuse1) != 0:
-
-        try:
+        if len(fuse1) > 1:
             fuse_loop1 = s[Out1].fuse(locals()[fuse1[0]], locals()[fuse1[1]])
             for k in range(2, len(fuse1)):
-                try: 
-                    fuse_loop1 = s[Out1].fuse(fuse_loop1, locals()[fuse1[k]])
-                except:
-                    continue
-        except:
+                fuse_loop1 = s[Out1].fuse(fuse_loop1, locals()[fuse1[k]])
+        else:
             fuse_loop1 = locals()[fuse1[0]]
 
         s[Out1].parallel(fuse_loop1)
 
     if len(fuse2) != 0:
-
-        try:
+        if len(fuse2) > 1:
             fuse_loop2 = s[Out2].fuse(locals()[fuse2[0]], locals()[fuse2[1]])
             for k in range(2, len(fuse2)):
-                try: 
-                    fuse_loop1 = s[Out1].fuse(fuse_loop2, locals()[fuse2[k]])
-                except:
-                    continue
-        except:
+                fuse_loop2 = s[Out2].fuse(fuse_loop2, locals()[fuse2[k]])
+        else:
             fuse_loop2= locals()[fuse2[0]]
 
         s[Out2].parallel(fuse_loop2)

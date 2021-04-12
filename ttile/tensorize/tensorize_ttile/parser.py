@@ -190,7 +190,7 @@ def replace(f, x, y):
             f[k] = f[k].replace(x, y)
     return f
 
-def factor(variable, structure, level_max, split = False):
+def factor(variable, order, structure, level_max, split = False):
     """
     Return the factor of each tile
     """
@@ -205,6 +205,23 @@ def factor(variable, structure, level_max, split = False):
         l = structure[k][4]
         if variable in l[0][0]:
             f += [l[3]]
+    v = 0
+
+    convert = {
+        "f": "axe_out_channels",
+        "c": "axe_in_channels",
+        "x": "axe_xx",
+        "y": "axe_yy",
+        "w": "axe_w",
+        "h": "axe_h"
+    }
+
+    for k in order:
+        if convert[variable] in k:
+            v += 1
+
+    if len(f) >= v and f[-1] == 1:
+        del f[-1]
 
     return f
 
@@ -370,7 +387,6 @@ def find_fuse(structure, level, order):
     nb_iteration = 0
     nb_iteration_fuse = []
     for k in range(level-1):
-        # print(structure[k])
         begin = structure[k + 1][4][1]
         end = structure[k + 1][4][2]
         split = structure[k + 1][4][3]
@@ -383,7 +399,6 @@ def find_fuse(structure, level, order):
             nb_iteration_fuse += [nb_iteration]
             fuse_int = []
             nb_iteration = 0
-            # print(fuse, nb_iteration_fuse)
     fuse += [fuse_int]
     nb_iteration_fuse += [nb_iteration]
     maxi = 0
@@ -392,7 +407,6 @@ def find_fuse(structure, level, order):
         if nb_iteration_fuse[k] > maxi:
             maxi = nb_iteration_fuse[k]
             id_max = k
-    # print(fuse[k], maxi)
     return fuse[k], maxi
 
 def order(o, suffix=""):
@@ -511,6 +525,7 @@ def parser(name, stride):
 
     number_of_file, f1, structure1, f2, structure2 = compute_structure(f)
 
+
     if number_of_file == 1:
         level1 = write_c_file("tensorize_files/" + name + ".c", structure1[1][1], f1, structure1)
 
@@ -522,21 +537,21 @@ def parser(name, stride):
         fuse, size_axe_fuse = find_fuse(structure1, level1, order1)
 
         info_tensorize[1] = {
-            "factor_out_channels": factor("f", structure1, level1),
-            "factor_xx": factor("x", structure1, level1),
-            "factor_yy": factor("y", structure1, level1),
-            "factor_h": factor("h", structure1, level1),
-            "factor_w": factor("w", structure1, level1),
-            "factor_in_channels": factor("c", structure1, level1),
+            "factor_out_channels": factor("f", order1, structure1, level1),
+            "factor_xx": factor("x", order1, structure1, level1),
+            "factor_yy": factor("y", order1, structure1, level1),
+            "factor_h": factor("h", order1, structure1, level1),
+            "factor_w": factor("w", order1, structure1, level1),
+            "factor_in_channels": factor("c", order1, structure1, level1),
             "order": order1,
             "nb_loop_no_tensorize": level1 - 1,
             "axe_to_tensorize": order1[level1 - 1],
             "h_t": find_size_tensorize("h", order1, level1, [], height1), 
             "w_t": find_size_tensorize("w", order1, level1, [], height1), 
-            "f_t": find_size_tensorize("f", order1, level1, factor("f", structure1, level1), height1), 
-            "c_t": find_size_tensorize("c", order1, level1, factor("c", structure1, level1), height1), 
-            "x_t": find_size_tensorize("x", order1, level1, factor("x", structure1, level1), height1), 
-            "y_t": find_size_tensorize("y", order1, level1, factor("y", structure1, level1), height1), 
+            "f_t": find_size_tensorize("f", order1, level1, factor("f", order1, structure1, level1), height1), 
+            "c_t": find_size_tensorize("c", order1, level1, factor("c", order1, structure1, level1), height1), 
+            "x_t": find_size_tensorize("x", order1, level1, factor("x", order1, structure1, level1), height1), 
+            "y_t": find_size_tensorize("y", order1, level1, factor("y", order1, structure1, level1), height1), 
             "fuse": fuse,
             "size_axe_fuse": size_axe_fuse,
             "schema": info_order_ttile,
@@ -544,60 +559,62 @@ def parser(name, stride):
 
     elif number_of_file == 2:
 
+        order1 = order(info_order, "1")
+        order2 = order(info_order, "2")
+
         level1 = write_c_file("tensorize_files/" + name + "1.c", structure1[1][1], f1, structure1, "1")
-        out_h1 = factor("height", structure1, level1, True)
+        out_h1 = factor("height", order1, structure1, level1, True)
         level2 = write_c_file("tensorize_files/" + name + "2.c", structure2[1][1], f2, structure2, "2", out_h1)
 
         # information for tensorize i.e. factor of tilling
         info_tensorize = {}
         
-        order1 = order(info_order, "1")
-        order2 = order(info_order, "2")
+        
 
-        height1 = factor("height", structure1, level1, True)
-        height2 = factor("height", structure2, level2, True)
+        height1 = factor("height", order1, structure1, level1, True)
+        height2 = factor("height", order2, structure2, level2, True)
 
         fuse1, size_axe_fuse1 = find_fuse(structure1, level1, order1)
         fuse2, size_axe_fuse2 = find_fuse(structure2, level2, order2)
 
         info_tensorize[1] = {
-            "height": factor("height", structure1, level1, True),
-            "factor_out_channels": factor("f", structure1, level1, True),
-            "factor_xx": factor("x", structure1, level1, True),
-            "factor_h": factor("h", structure1, level1),
-            "factor_w": factor("w", structure1, level1),
-            "factor_yy": factor("y", structure1, level1, True),
-            "factor_in_channels": factor("c", structure1, level1, True),
+            "height": factor("height", order1, structure1, level1, True),
+            "factor_out_channels": factor("f", order1, structure1, level1, True),
+            "factor_xx": factor("x", order1, structure1, level1, True),
+            "factor_h": factor("h", order1, structure1, level1),
+            "factor_w": factor("w", order1, structure1, level1),
+            "factor_yy": factor("y", order1, structure1, level1, True),
+            "factor_in_channels": factor("c", order1, structure1, level1, True),
             "order": order1,
             "nb_loop_no_tensorize": level1 - 1,
             "axe_to_tensorize": order1[level1 - 1],
             "h_t": find_size_tensorize("h", order1, level1, [], height1), 
             "w_t": find_size_tensorize("w", order1, level1, [], height1), 
-            "f_t": find_size_tensorize("f", order1, level1, factor("f", structure1, level1,  True), height1), 
-            "c_t": find_size_tensorize("c", order1, level1, factor("c", structure1, level1,  True), height1), 
-            "x_t": find_size_tensorize("x", order1, level1, factor("x", structure1, level1,  True), height1), 
-            "y_t": find_size_tensorize("y", order1, level1, factor("y", structure1, level1,  True), height1), 
+            "f_t": find_size_tensorize("f", order1, level1, factor("f", order1, structure1, level1,  True), height1), 
+            "c_t": find_size_tensorize("c", order1, level1, factor("c", order1, structure1, level1,  True), height1), 
+            "x_t": find_size_tensorize("x", order1, level1, factor("x", order1, structure1, level1,  True), height1), 
+            "y_t": find_size_tensorize("y", order1, level1, factor("y", order1, structure1, level1,  True), height1), 
             "fuse": fuse1,
             "size_axe_fuse": size_axe_fuse1,
             "schema": info_order_ttile,
         }
         info_tensorize[2] = {
-            "height": factor("height", structure2, level2,  True),
-            "factor_out_channels": factor("f", structure2, level2,  True),
-            "factor_xx": factor("x", structure2, level2,  True),
-            "factor_h": factor("h", structure2, level2),
-            "factor_w": factor("w", structure2, level2),
-            "factor_yy": factor("y", structure2, level2,  True),
-            "factor_in_channels": factor("c", structure2, level2,  True),
+            "height": factor("height", order2, structure2, level2,  True),
+            "factor_out_channels": factor("f", order2, structure2, level2,  True),
+            "factor_xx": factor("x", order2, structure2, level2,  True),
+            "factor_h": factor("h", order2, structure2, level2),
+            "factor_w": factor("w", order2, structure2, level2),
+            "factor_yy": factor("y", order2, structure2, level2,  True),
+            "factor_in_channels": factor("c", order2, structure2, level2,  True),
             "order": order2,
             "nb_loop_no_tensorize": level2 - 1,
             "axe_to_tensorize": order2[level2 - 1],
             "h_t": find_size_tensorize("h", order2, level2, [], height2), 
             "w_t": find_size_tensorize("w", order2, level2, [], height2), 
-            "f_t": find_size_tensorize("f", order2, level2, factor("f", structure2, level2,  True), height2),
-            "c_t": find_size_tensorize("c", order2, level2, factor("c", structure2, level2,  True), height2), 
-            "x_t": find_size_tensorize("x", order2, level2, factor("x", structure2, level2,  True), height2), 
-            "y_t": find_size_tensorize("y", order2, level2, factor("y", structure2, level2,  True), height2), 
+            "f_t": find_size_tensorize("f", order2, level2, factor("f", order2, structure2, level2,  True), height2),
+            "c_t": find_size_tensorize("c", order2, level2, factor("c", order2, structure2, level2,  True), height2), 
+            "x_t": find_size_tensorize("x", order2, level2, factor("x", order2, structure2, level2,  True), height2), 
+            "y_t": find_size_tensorize("y", order2, level2, factor("y", order2, structure2, level2,  True), height2), 
             "fuse": fuse2,
             "size_axe_fuse": size_axe_fuse2,
             "schema": info_order_ttile,
@@ -620,21 +637,21 @@ def parser(name, stride):
 
         level1 -= 1
         info_tensorize[1] = {
-            "factor_out_channels": factor("f", structure1, level1),
-            "factor_xx": factor("x", structure1, level1),
-            "factor_yy": factor("y", structure1, level1),
-            "factor_h": factor("h", structure1, level1),
-            "factor_w": factor("w", structure1, level1),
-            "factor_in_channels": factor("c", structure1, level1),
+            "factor_out_channels": factor("f", order1, structure1, level1),
+            "factor_xx": factor("x", order1, structure1, level1),
+            "factor_yy": factor("y", order1, structure1, level1),
+            "factor_h": factor("h", order1, structure1, level1),
+            "factor_w": factor("w", order1, structure1, level1),
+            "factor_in_channels": factor("c", order1, structure1, level1),
             "order": order1,
             "nb_loop_no_tensorize": level1 ,
             "axe_to_tensorize": order1[level1 ],
             "h_t": find_size_tensorize("h", order1, level1, [], height1), 
             "w_t": find_size_tensorize("w", order1, level1, [], height1), 
-            "f_t": find_size_tensorize("f", order1, level1, factor("f", structure1, level1), height1), 
-            "c_t": find_size_tensorize("c", order1, level1, factor("c", structure1, level1), height1), 
-            "x_t": find_size_tensorize("x", order1, level1, factor("x", structure1, level1), height1), 
-            "y_t": find_size_tensorize("y", order1, level1, factor("y", structure1, level1), height1), 
+            "f_t": find_size_tensorize("f", order1, level1, factor("f", order1, structure1, level1), height1), 
+            "c_t": find_size_tensorize("c", order1, level1, factor("c", order1, structure1, level1), height1), 
+            "x_t": find_size_tensorize("x", order1, level1, factor("x", order1, structure1, level1), height1), 
+            "y_t": find_size_tensorize("y", order1, level1, factor("y", order1, structure1, level1), height1), 
             "fuse": fuse,
             "size_axe_fuse": size_axe_fuse,
             "schema": info_order_ttile,
