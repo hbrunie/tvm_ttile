@@ -83,7 +83,7 @@ def intrin_conv(name_function, W, H, C, F, X, Y, stride_w, stride_h):
     if stride_h == 1:
         a = te.placeholder((1, X  + W - 1, Y  + H - 1, C), name="a")
     else:
-        a = te.placeholder((1, X * stride_w + W - 2, Y * stride_h + H - 2, C), name="a")
+        a = te.placeholder((1, X * stride_w + W - 1, Y * stride_h + H - 1, C), name="a")
     w = te.placeholder((W, H, C, F), name="w")
 
     axe_in_channels = te.reduce_axis((0, C), name="axe_in_channels")
@@ -237,7 +237,7 @@ def conv2d_ttile_1kernel(name, batch_size, width, height, kernel_w, kernel_h, in
 
     s[Out].tensorize(locals()[info_tile[1]["axe_to_tensorize"]], conv1)
     s[Out].pragma(locals()["axe_batch_0"], "import_llvm", conv_impl(name, len(info_tile)))
-
+    # print(tvm.lower(s, [A, W, Out], simple_mode=True))
 
     return s, [A, W, Out]
 
@@ -418,14 +418,18 @@ if __name__ == '__main__':
     archi = sys.argv[2]
     nb_runs = int(sys.argv[3])
 
+    file_result = open("result_" + name_conv + ".csv", "w")
+    file_result.write("IdRun;NameConv;Time(ms);std;NbMicroKernel;AxeFuse;SizeAxeFuse;Schema\n")
+
+
     for runs in range(nb_runs):
 
         # os.system(f"""(cd {HOME}/matmul_bench && python3.8 create.py {name_conv} {archi})""")
         # os.system(f"""(cd {HOME}/matmul_bench/ml_utils && dune exec ./stephane_search.exe)""")
         # os.system(f"""cp {HOME}/matmul_bench/c_bench/gen/gen_conv.c {HOME}/tvm_ttile/ttile/tensorize/tensorize_ttile/c_files/{name_conv}.c""")
 
-        try:
-        # if True:
+        # try:
+        if True:
 
             out_channels, in_channels, height, width, kernel_h, kernel_w, stride_h, stride_w = input_conv.input_conv[name_conv]
             batch_size = 1
@@ -450,6 +454,10 @@ if __name__ == '__main__':
             else:
                 s, I = conv2d_ttile_2kernel(name_conv, batch_size, width, height, kernel_w, kernel_h, in_channels, out_channels, info_tile, stride_w, stride_h)
                 A, W, Out = I
+
+            
+
+            
 
             func = tvm.build(s, [A, W, Out], target=target, name="conv")
 
@@ -497,10 +505,14 @@ if __name__ == '__main__':
             result = np.mean(results)
             std = np.std(results)
 
+            #NbMicroKernel;AxeFuse;SizeAxeFuse;Schema
+            axe_fuse = ",".join(info_tile[1]["fuse"])
+            size_axe_fuse = info_tile[1]["size_axe_fuse"]
+            schema = info_tile[1]["schema"]
 
-            file_ = open("result.csv", "a")
-            file_.write(str(runs) + ";" + name_conv + ";" + str(result) + ";" + str(std) + "\n")
-            file_.close()
+            
+            file_result.write(str(runs) + ";" + name_conv + ";" + str(result) + ";" + str(std) + ";" + str(len(info_tile)) + ";" + axe_fuse + ";" + str(size_axe_fuse) + ";" + schema + "\n")
+            
 
             os.system("cp c_files/" + name_conv + ".c old_c_files/" + name_conv + "__" + str(runs) + ".c" )
             if len(info_tile) == 1:
@@ -509,10 +521,12 @@ if __name__ == '__main__':
                 os.system("cp tensorize_files/" + name_conv + "1.c old_c_files/" + name_conv + "1_tensorize__" + str(runs) + ".c" )
                 os.system("cp tensorize_files/" + name_conv + "2.c old_c_files/" + name_conv + "2_tensorize__" + str(runs) + ".c" )
 
-            os.system("python3.8 main_tvm.py " + name_conv + " " + archi + " " + str(runs))
+            # os.system("python3.8 main_tvm.py " + name_conv + " " + archi + " " + str(runs))
 
-        except:
-        # else:
+        # except:
+        else:
             tt = open("faux.csv", "a")
             tt.write(name_conv + " " + str(runs) + "\n")
             tt.close()
+
+    file_result.close()

@@ -369,7 +369,8 @@ def find_fuse(structure, level, order):
     fuse_int = []
     nb_iteration = 0
     nb_iteration_fuse = []
-    for k in range(level - 1):
+    for k in range(level-1):
+        # print(structure[k])
         begin = structure[k + 1][4][1]
         end = structure[k + 1][4][2]
         split = structure[k + 1][4][3]
@@ -382,15 +383,17 @@ def find_fuse(structure, level, order):
             nb_iteration_fuse += [nb_iteration]
             fuse_int = []
             nb_iteration = 0
-    if len(fuse) == 0:
-        return fuse_int
+            # print(fuse, nb_iteration_fuse)
+    fuse += [fuse_int]
+    nb_iteration_fuse += [nb_iteration]
     maxi = 0
     id_max = 0
     for k in range(len(fuse)):
         if nb_iteration_fuse[k] > maxi:
             maxi = nb_iteration_fuse[k]
             id_max = k
-    return fuse[k]
+    # print(fuse[k], maxi)
+    return fuse[k], maxi
 
 def order(o, suffix=""):
     """
@@ -464,6 +467,8 @@ def parser(name, stride):
 
     info_order = info_order.replace("\n", "")
 
+    info_order_ttile = "".join(info_order.replace(";", ","))
+
     linfo_order = info_order.split(";")
 
     info_order = []
@@ -514,6 +519,7 @@ def parser(name, stride):
 
         order1 = order(info_order)
         height1 = size["y"] 
+        fuse, size_axe_fuse = find_fuse(structure1, level1, order1)
 
         info_tensorize[1] = {
             "factor_out_channels": factor("f", structure1, level1),
@@ -531,7 +537,9 @@ def parser(name, stride):
             "c_t": find_size_tensorize("c", order1, level1, factor("c", structure1, level1), height1), 
             "x_t": find_size_tensorize("x", order1, level1, factor("x", structure1, level1), height1), 
             "y_t": find_size_tensorize("y", order1, level1, factor("y", structure1, level1), height1), 
-            "fuse": find_fuse(structure1, level1, order1),
+            "fuse": fuse,
+            "size_axe_fuse": size_axe_fuse,
+            "schema": info_order_ttile,
         }
 
     elif number_of_file == 2:
@@ -548,6 +556,9 @@ def parser(name, stride):
 
         height1 = factor("height", structure1, level1, True)
         height2 = factor("height", structure2, level2, True)
+
+        fuse1, size_axe_fuse1 = find_fuse(structure1, level1, order1)
+        fuse2, size_axe_fuse2 = find_fuse(structure2, level2, order2)
 
         info_tensorize[1] = {
             "height": factor("height", structure1, level1, True),
@@ -566,7 +577,9 @@ def parser(name, stride):
             "c_t": find_size_tensorize("c", order1, level1, factor("c", structure1, level1,  True), height1), 
             "x_t": find_size_tensorize("x", order1, level1, factor("x", structure1, level1,  True), height1), 
             "y_t": find_size_tensorize("y", order1, level1, factor("y", structure1, level1,  True), height1), 
-            "fuse": find_fuse(structure1, level1, order1),
+            "fuse": fuse1,
+            "size_axe_fuse": size_axe_fuse1,
+            "schema": info_order_ttile,
         }
         info_tensorize[2] = {
             "height": factor("height", structure2, level2,  True),
@@ -585,7 +598,9 @@ def parser(name, stride):
             "c_t": find_size_tensorize("c", order2, level2, factor("c", structure2, level2,  True), height2), 
             "x_t": find_size_tensorize("x", order2, level2, factor("x", structure2, level2,  True), height2), 
             "y_t": find_size_tensorize("y", order2, level2, factor("y", structure2, level2,  True), height2), 
-            "fuse": find_fuse(structure2, level2, order2),
+            "fuse": fuse2,
+            "size_axe_fuse": size_axe_fuse2,
+            "schema": info_order_ttile,
         }
 
     # special case when y is tile and after split
@@ -597,6 +612,8 @@ def parser(name, stride):
 
         # information for tensorize i.e. factor of tilling
         info_tensorize = {}
+
+        fuse, size_axe_fuse = find_fuse(structure1, level1, order1)
 
         order1 = order(info_order)
         height1 = size["y"] 
@@ -618,7 +635,9 @@ def parser(name, stride):
             "c_t": find_size_tensorize("c", order1, level1, factor("c", structure1, level1), height1), 
             "x_t": find_size_tensorize("x", order1, level1, factor("x", structure1, level1), height1), 
             "y_t": find_size_tensorize("y", order1, level1, factor("y", structure1, level1), height1), 
-            "fuse": find_fuse(structure1, level1, order1),
+            "fuse": fuse,
+            "size_axe_fuse": size_axe_fuse,
+            "schema": info_order_ttile,
         }
 
     return info_tensorize
