@@ -501,7 +501,6 @@ if __name__ == '__main__':
             file_result = open("result_" + name_conv + ".csv", "a")
             file_result.write(str(runs) + ";" + name_conv + ";" + str(result) + ";" + str(std) + ";" + str(len(info_tile)) + ";" + axe_fuse + ";" + str(size_axe_fuse) + ";" + schema + "\n")
             file_result.close()
-            
 
             os.system("cp c_files/" + name_conv + ".c old_c_files/" + name_conv + "__" + str(runs) + ".c" )
             if len(info_tile) == 1:
