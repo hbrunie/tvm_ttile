@@ -629,10 +629,12 @@ def parser(name, stride):
 
         # information for tensorize i.e. factor of tilling
         info_tensorize = {}
+        
+        order1 = order(info_order)
 
         fuse, size_axe_fuse = find_fuse(structure1, level1, order1)
 
-        order1 = order(info_order)
+        
         height1 = size["y"] 
 
         level1 -= 1
