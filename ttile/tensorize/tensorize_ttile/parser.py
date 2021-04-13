@@ -164,7 +164,7 @@ typedef float M_TYPE;
                     else:
                         end_loop = info[k][2]
                         end_iteration = info[k][4][2]
-                        
+
                         info[id_y][2] = end_loop
                         info[id_y][4][2] = end_iteration
                         info[id_y][4][3] = end_iteration
@@ -407,7 +407,7 @@ def find_fuse(structure, level, order):
         if nb_iteration_fuse[k] > maxi:
             maxi = nb_iteration_fuse[k]
             id_max = k
-    return fuse[k], maxi
+    return fuse[id_max], maxi
 
 def order(o, suffix=""):
     """
@@ -475,7 +475,7 @@ def parser(name, stride):
             info_orderbegin = k
         if "*/" in f[k]:
             info_orderend = k
-    
+
     for k in range(info_orderbegin + 1, info_orderend):
         info_order += f[k]
 
@@ -533,7 +533,7 @@ def parser(name, stride):
         info_tensorize = {}
 
         order1 = order(info_order)
-        height1 = size["y"] 
+        height1 = size["y"]
         fuse, size_axe_fuse = find_fuse(structure1, level1, order1)
 
         info_tensorize[1] = {
@@ -546,12 +546,12 @@ def parser(name, stride):
             "order": order1,
             "nb_loop_no_tensorize": level1 - 1,
             "axe_to_tensorize": order1[level1 - 1],
-            "h_t": find_size_tensorize("h", order1, level1, [], height1), 
-            "w_t": find_size_tensorize("w", order1, level1, [], height1), 
-            "f_t": find_size_tensorize("f", order1, level1, factor("f", order1, structure1, level1), height1), 
-            "c_t": find_size_tensorize("c", order1, level1, factor("c", order1, structure1, level1), height1), 
-            "x_t": find_size_tensorize("x", order1, level1, factor("x", order1, structure1, level1), height1), 
-            "y_t": find_size_tensorize("y", order1, level1, factor("y", order1, structure1, level1), height1), 
+            "h_t": find_size_tensorize("h", order1, level1, [], height1),
+            "w_t": find_size_tensorize("w", order1, level1, [], height1),
+            "f_t": find_size_tensorize("f", order1, level1, factor("f", order1, structure1, level1), height1),
+            "c_t": find_size_tensorize("c", order1, level1, factor("c", order1, structure1, level1), height1),
+            "x_t": find_size_tensorize("x", order1, level1, factor("x", order1, structure1, level1), height1),
+            "y_t": find_size_tensorize("y", order1, level1, factor("y", order1, structure1, level1), height1),
             "fuse": fuse,
             "size_axe_fuse": size_axe_fuse,
             "schema": info_order_ttile,
@@ -568,8 +568,8 @@ def parser(name, stride):
 
         # information for tensorize i.e. factor of tilling
         info_tensorize = {}
-        
-        
+
+
 
         height1 = factor("height", order1, structure1, level1, True)
         height2 = factor("height", order2, structure2, level2, True)
@@ -588,12 +588,12 @@ def parser(name, stride):
             "order": order1,
             "nb_loop_no_tensorize": level1 - 1,
             "axe_to_tensorize": order1[level1 - 1],
-            "h_t": find_size_tensorize("h", order1, level1, [], height1), 
-            "w_t": find_size_tensorize("w", order1, level1, [], height1), 
-            "f_t": find_size_tensorize("f", order1, level1, factor("f", order1, structure1, level1,  True), height1), 
-            "c_t": find_size_tensorize("c", order1, level1, factor("c", order1, structure1, level1,  True), height1), 
-            "x_t": find_size_tensorize("x", order1, level1, factor("x", order1, structure1, level1,  True), height1), 
-            "y_t": find_size_tensorize("y", order1, level1, factor("y", order1, structure1, level1,  True), height1), 
+            "h_t": find_size_tensorize("h", order1, level1, [], height1),
+            "w_t": find_size_tensorize("w", order1, level1, [], height1),
+            "f_t": find_size_tensorize("f", order1, level1, factor("f", order1, structure1, level1,  True), height1),
+            "c_t": find_size_tensorize("c", order1, level1, factor("c", order1, structure1, level1,  True), height1),
+            "x_t": find_size_tensorize("x", order1, level1, factor("x", order1, structure1, level1,  True), height1),
+            "y_t": find_size_tensorize("y", order1, level1, factor("y", order1, structure1, level1,  True), height1),
             "fuse": fuse1,
             "size_axe_fuse": size_axe_fuse1,
             "schema": info_order_ttile,
@@ -609,12 +609,12 @@ def parser(name, stride):
             "order": order2,
             "nb_loop_no_tensorize": level2 - 1,
             "axe_to_tensorize": order2[level2 - 1],
-            "h_t": find_size_tensorize("h", order2, level2, [], height2), 
-            "w_t": find_size_tensorize("w", order2, level2, [], height2), 
+            "h_t": find_size_tensorize("h", order2, level2, [], height2),
+            "w_t": find_size_tensorize("w", order2, level2, [], height2),
             "f_t": find_size_tensorize("f", order2, level2, factor("f", order2, structure2, level2,  True), height2),
-            "c_t": find_size_tensorize("c", order2, level2, factor("c", order2, structure2, level2,  True), height2), 
-            "x_t": find_size_tensorize("x", order2, level2, factor("x", order2, structure2, level2,  True), height2), 
-            "y_t": find_size_tensorize("y", order2, level2, factor("y", order2, structure2, level2,  True), height2), 
+            "c_t": find_size_tensorize("c", order2, level2, factor("c", order2, structure2, level2,  True), height2),
+            "x_t": find_size_tensorize("x", order2, level2, factor("x", order2, structure2, level2,  True), height2),
+            "y_t": find_size_tensorize("y", order2, level2, factor("y", order2, structure2, level2,  True), height2),
             "fuse": fuse2,
             "size_axe_fuse": size_axe_fuse2,
             "schema": info_order_ttile,
@@ -623,19 +623,19 @@ def parser(name, stride):
     # special case when y is tile and after split
     else:
         index_dedoublement = f2
-        level_to_tensorize = index_dedoublement - 1 
+        level_to_tensorize = index_dedoublement - 1
 
         level1, structure1 = write_c_file_special_case("tensorize_files/" + name + ".c", structure1[1][1], f1, structure1, level_to_tensorize)
 
         # information for tensorize i.e. factor of tilling
         info_tensorize = {}
-        
+
         order1 = order(info_order)
 
         fuse, size_axe_fuse = find_fuse(structure1, level1, order1)
 
-        
-        height1 = size["y"] 
+
+        height1 = size["y"]
 
         level1 -= 1
         info_tensorize[1] = {
@@ -648,15 +648,17 @@ def parser(name, stride):
             "order": order1,
             "nb_loop_no_tensorize": level1 ,
             "axe_to_tensorize": order1[level1 ],
-            "h_t": find_size_tensorize("h", order1, level1, [], height1), 
-            "w_t": find_size_tensorize("w", order1, level1, [], height1), 
-            "f_t": find_size_tensorize("f", order1, level1, factor("f", order1, structure1, level1), height1), 
-            "c_t": find_size_tensorize("c", order1, level1, factor("c", order1, structure1, level1), height1), 
-            "x_t": find_size_tensorize("x", order1, level1, factor("x", order1, structure1, level1), height1), 
-            "y_t": find_size_tensorize("y", order1, level1, factor("y", order1, structure1, level1), height1), 
+            "h_t": find_size_tensorize("h", order1, level1, [], height1),
+            "w_t": find_size_tensorize("w", order1, level1, [], height1),
+            "f_t": find_size_tensorize("f", order1, level1, factor("f", order1, structure1, level1), height1),
+            "c_t": find_size_tensorize("c", order1, level1, factor("c", order1, structure1, level1), height1),
+            "x_t": find_size_tensorize("x", order1, level1, factor("x", order1, structure1, level1), height1),
+            "y_t": find_size_tensorize("y", order1, level1, factor("y", order1, structure1, level1), height1),
             "fuse": fuse,
             "size_axe_fuse": size_axe_fuse,
             "schema": info_order_ttile,
         }
 
     return info_tensorize
+
+print(parser("MobilNet_5", 1))
