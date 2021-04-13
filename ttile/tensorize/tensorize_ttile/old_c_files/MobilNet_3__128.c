@@ -7,8 +7,8 @@ M_TYPE const * const __restrict__ input, M_TYPE const * const __restrict__ param
     IND_TYPE Y, IND_TYPE H,
 	IND_TYPE C, IND_TYPE F) {
 /*
-[V f; U (4, f); U (7, y); T (8, c); Hoist_vars [c]; T (8, x); T (3, w);
-  T (3, h); T (4, y); T (2, f); T (16, c); T (7, x); T (2, y)]
+[V f; U (4, f); U (7, y); T (1, c); Hoist_vars [c]; T (28, x); T (3, w);
+  T (3, h); T (4, y); T (2, f); T (128, c); T (2, x); T (2, y)]
 */
 IND_TYPE c, c0, cp_0, c0_p_0, cp_1, f, fp_0, h, hp_0, w, wp_0, x, x0, xp_0, x0_p_0, xp_1, y, y0, yp_0, y0_p_0, yp_1;
 
@@ -32,39 +32,39 @@ for (y0 = y1, y0_p_0 = 0;
 	y0 < y1 + 56;
 	y0 += 28, y0_p_0 += 28){
 	// y = 28, x = 56, h = 3, w = 3, c = 128, f = 128
-	// T (x, 7) (56 / 8)
+	// T (x, 2) (56 / 28)
 	for (x0 = x1, x0_p_0 = 0;
 		x0 < x1 + 56;
-		x0 += 8, x0_p_0 += 8){
-		// y = 28, x = 8, h = 3, w = 3, c = 128, f = 128
-		// T (c, 16) (128 / 8)
+		x0 += 28, x0_p_0 += 28){
+		// y = 28, x = 28, h = 3, w = 3, c = 128, f = 128
+		// T (c, 128) (128 / 1)
 		for (c0 = c1, c0_p_0 = 0;
 			c0 < c1 + 128;
-			c0 += 8, c0_p_0 += 8){
-			// y = 28, x = 8, h = 3, w = 3, c = 8, f = 128
+			c0 += 1, c0_p_0 += 1){
+			// y = 28, x = 28, h = 3, w = 3, c = 1, f = 128
 			// T (f, 2) (128 / 64)
 			for (f = f0, fp_0 = 0;
 				f < f0 + 128;
 				f += 64, fp_0 += 64){
-				// y = 28, x = 8, h = 3, w = 3, c = 8, f = 64
+				// y = 28, x = 28, h = 3, w = 3, c = 1, f = 64
 				// T (y, 4) (28 / 7)
 				for (y = y0, yp_1 = y0_p_0, yp_0 = 0;
 					y < y0 + 28;
 					y += 7, yp_1 += 7, yp_0 += 7){
-					// y = 7, x = 8, h = 3, w = 3, c = 8, f = 64
+					// y = 7, x = 28, h = 3, w = 3, c = 1, f = 64
 					// T (h, 3) (3 / 1)
 					for (h = h0, hp_0 = 0;
 						h < h0 + 3;
 						h += 1, hp_0 += 1){
-						// y = 7, x = 8, h = 1, w = 3, c = 8, f = 64
+						// y = 7, x = 28, h = 1, w = 3, c = 1, f = 64
 						// T (w, 3) (3 / 1)
 						for (w = w0, wp_0 = 0;
 							w < w0 + 3;
 							w += 1, wp_0 += 1){
-							// y = 7, x = 8, h = 1, w = 1, c = 8, f = 64
-							// T (x, 8) (8 / 1)
+							// y = 7, x = 28, h = 1, w = 1, c = 1, f = 64
+							// T (x, 28) (28 / 1)
 							for (x = x0, xp_1 = x0_p_0, xp_0 = 0;
-								x < x0 + 8;
+								x < x0 + 28;
 								x += 1, xp_1 += 1, xp_0 += 1){
 										mem_vec_0 = _mm512_loadu_ps(&output[(F * Y) * x + F * y + f]);
 										mem_vec_1 = _mm512_loadu_ps(&output[(F * Y) * x + F * y + f + 16]);
@@ -94,10 +94,10 @@ for (y0 = y1, y0_p_0 = 0;
 										mem_vec_25 = _mm512_loadu_ps(&output[(F * Y) * x + F * (y + 6) + f + 16]);
 										mem_vec_26 = _mm512_loadu_ps(&output[(F * Y) * x + F * (y + 6) + f + 32]);
 										mem_vec_27 = _mm512_loadu_ps(&output[(F * Y) * x + F * (y + 6) + f + 48]);
-										// y = 7, x = 1, h = 1, w = 1, c = 8, f = 64
-										// T (c, 8) (8 / 1)
+										// y = 7, x = 1, h = 1, w = 1, c = 1, f = 64
+										// T (c, 1) (1 / 1)
 										for (c = c0, cp_1 = c0_p_0, cp_0 = 0;
-											c < c0 + 8;
+											c < c0 + 1;
 											c += 1, cp_1 += 1, cp_0 += 1){
 											scal_0 = input[(C * (Y + H - 1)) * (x + w) + C * (y + h) + c];
 											vec_1 = _mm512_set1_ps(scal_0);
