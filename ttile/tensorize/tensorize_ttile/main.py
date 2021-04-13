@@ -407,6 +407,7 @@ if __name__ == '__main__':
 
     file_result = open("result_" + name_conv + ".csv", "w")
     file_result.write("IdRun;NameConv;Time(ms);std;NbMicroKernel;AxeFuse;SizeAxeFuse;Schema\n")
+    file_result.close()
 
 
     for runs in range(nb_runs):
@@ -466,21 +467,21 @@ if __name__ == '__main__':
             results = [(evaluator(a, w, o).mean * 1e3)]
             #check result
 
-            from tvm.topi.nn import conv2d_nhwc
+            #from tvm.topi.nn import conv2d_nhwc
 
-            A = te.placeholder((batch_size, width + kernel_w - 1, height + kernel_h - 1, in_channels), name="A")
-            W = te.placeholder((kernel_w, kernel_h, in_channels, out_channels), name="W")
+            #A = te.placeholder((batch_size, width + kernel_w - 1, height + kernel_h - 1, in_channels), name="A")
+            #W = te.placeholder((kernel_w, kernel_h, in_channels, out_channels), name="W")
 
-            Out_test = conv2d_nhwc(A, W, stride_h, 0, 1, "float32")
+            #Out_test = conv2d_nhwc(A, W, stride_h, 0, 1, "float32")
 
-            s = te.create_schedule(Out_test.op)
+            #s = te.create_schedule(Out_test.op)
 
-            f_test = tvm.build(s, [A, W, Out_test], target)
-            f_test(a, w, oo)
+            #f_test = tvm.build(s, [A, W, Out_test], target)
+            #f_test(a, w, oo)
 
-            output_conv2d_test = oo.asnumpy()
+            #output_conv2d_test = oo.asnumpy()
 
-            tvm.testing.assert_allclose(tensorize_result, output_conv2d_test, rtol=1e-5)
+            #tvm.testing.assert_allclose(tensorize_result, output_conv2d_test, rtol=1e-5)
 
             for k in range(19):
                 results += [float(os.popen("python3 run.py " + name_conv + " " + archi).read())]
@@ -497,9 +498,9 @@ if __name__ == '__main__':
             size_axe_fuse = info_tile[1]["size_axe_fuse"]
             schema = info_tile[1]["schema"]
 
-            
+            file_result = open("result_" + name_conv + ".csv", "a")
             file_result.write(str(runs) + ";" + name_conv + ";" + str(result) + ";" + str(std) + ";" + str(len(info_tile)) + ";" + axe_fuse + ";" + str(size_axe_fuse) + ";" + schema + "\n")
-            
+            file.close()
 
             os.system("cp c_files/" + name_conv + ".c old_c_files/" + name_conv + "__" + str(runs) + ".c" )
             if len(info_tile) == 1:
@@ -516,4 +517,4 @@ if __name__ == '__main__':
             tt.write(name_conv + " " + str(runs) + "\n")
             tt.close()
 
-    file_result.close()
+
