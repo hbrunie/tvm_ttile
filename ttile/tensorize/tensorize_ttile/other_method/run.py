@@ -8,11 +8,9 @@ import input_conv
 import parser
 import sys
 import os
-import random
-import time
 
-HOME = "/root"
-# HOME = "/home/colo"
+# HOME = "/root"
+HOME = "/home/colo"
 
 def generate_ttile_conv2d(name_file, number_of_file):
 
@@ -73,7 +71,6 @@ def conv_impl(name_file, number_of_file):
 
 def intrin_conv(name_function, W, H, C, F, X, Y, stride_w, stride_h):
 
-
     """
     W = kernel_w,
     H = kernel_h,
@@ -82,10 +79,8 @@ def intrin_conv(name_function, W, H, C, F, X, Y, stride_w, stride_h):
     X = width,
     Y = height
     """
-    if stride_h == 1:
-        a = te.placeholder((1, X  + W - 1, Y  + H - 1, C), name="a")
-    else:
-        a = te.placeholder((1, X * stride_w + W - 1, Y * stride_h + H - 1, C), name="a")
+    # a = te.placeholder((1, X * stride_w + W - 1, Y * stride_h + H - 1, C), name="a")
+    a = te.placeholder((1, X  + W - 1, Y  + H - 1, C), name="a")
     w = te.placeholder((W, H, C, F), name="w")
 
     axe_in_channels = te.reduce_axis((0, C), name="axe_in_channels")
@@ -113,7 +108,6 @@ def intrin_conv(name_function, W, H, C, F, X, Y, stride_w, stride_h):
     Ab = tvm.tir.decl_buffer(a.shape, a.dtype, name="A", offset_factor=1, strides=[strideA1, strideA2, strideA3, 1])
     Ww = tvm.tir.decl_buffer(w.shape, w.dtype, name="W", offset_factor=1, strides=[strideB1, strideB2, strideB3, 1])
     Oo = tvm.tir.decl_buffer(o.shape, o.dtype, name="O", offset_factor=1, strides=[strideC1, strideC2, strideC3, 1])
-
 
     def intrin_func(ins, outs):
         aa, ww = ins
@@ -188,7 +182,7 @@ def conv2d_ttile_1kernel(name, batch_size, width, height, kernel_w, kernel_h, in
         )
     s = te.create_schedule(Out.op)
 
-
+    
 
     locals()["axe_batch_0"], locals()["axe_xx_0"], locals()["axe_yy_0"], locals()["axe_out_channels_0"] = Out.op.axis
     locals()["axe_in_channels_0"], locals()["axe_h_0"], locals()["axe_w_0"] = Out.op.reduce_axis
@@ -217,6 +211,9 @@ def conv2d_ttile_1kernel(name, batch_size, width, height, kernel_w, kernel_h, in
 
 
     s[Out].reorder(*order1)
+
+    # print(tvm.lower(s, [A, W, Out], simple_mode=True))
+
     fuse1 = info_tile[1]["fuse"]
 
     if len(fuse1) != 0:
@@ -233,7 +230,7 @@ def conv2d_ttile_1kernel(name, batch_size, width, height, kernel_w, kernel_h, in
 
     s[Out].tensorize(locals()[info_tile[1]["axe_to_tensorize"]], conv1)
     s[Out].pragma(locals()["axe_batch_0"], "import_llvm", conv_impl(name, len(info_tile)))
-    # print(tvm.lower(s, [A, W, Out], simple_mode=True))
+
 
     return s, [A, W, Out]
 
@@ -254,12 +251,11 @@ def conv2d_ttile_2kernel(name, batch_size, width, height, kernel_w, kernel_h, in
     out_w = width // stride_w
 
     # with info_tile height and width are already / by strides
-    out_h1 = info_tile[1]["height"]
+    out_h1 = info_tile[1]["height"] 
     out_h2 = info_tile[2]["height"]
 
-
-    size_h1 = info_tile[1]["height"]
-    size_h2 = info_tile[2]["height"]
+    size_h1 = info_tile[1]["height"] 
+    size_h2 = info_tile[2]["height"] 
 
     Out1 = te.compute(
         (batch_size, out_w, out_h1, out_channels),
@@ -291,7 +287,6 @@ def conv2d_ttile_2kernel(name, batch_size, width, height, kernel_w, kernel_h, in
     # tester si avec deux A c'est mieux ou pas
 
     Out = assign_output(Out1, Out2)
-
 
     s = te.create_schedule(Out.op)
 
@@ -335,7 +330,6 @@ def conv2d_ttile_2kernel(name, batch_size, width, height, kernel_w, kernel_h, in
     order_string1 = info_tile[1]["order"]
     order_string2 = info_tile[2]["order"]
 
-
     order1 = [locals()["axe_batch1_0"]]
     for k in order_string1:
         order1 += [locals()[k]]
@@ -348,10 +342,10 @@ def conv2d_ttile_2kernel(name, batch_size, width, height, kernel_w, kernel_h, in
     s[Out1].reorder(*order1)
     s[Out2].reorder(*order2)
 
+    # print(tvm.lower(s, [A, W, Out], simple_mode=True))
 
     fuse1 = info_tile[1]["fuse"]
     fuse2 = info_tile[2]["fuse"]
-    # print(tvm.lower(s, [A, W, Out], simple_mode=True))
 
     if len(fuse1) != 0:
         if len(fuse1) > 1:
@@ -388,8 +382,6 @@ def conv2d_ttile_2kernel(name, batch_size, width, height, kernel_w, kernel_h, in
 
 if __name__ == '__main__':
 
-    begin_time = time.time()
-
     try:
         os.mkdir("old_c_files")
     except FileExistsError:
@@ -401,139 +393,53 @@ if __name__ == '__main__':
         pass
 
     try:
-        os.mkdir("int_files")
-    except FileExistsError:
-        pass
-
-    try:
-        os.mkdir("result_ttile")
-    except FileExistsError:
-        pass
-
-    try:
         os.mkdir("tensorize_files")
-    except FileExistsError:
-        pass
-
-    try:
-        os.mkdir("results")
     except FileExistsError:
         pass
 
     name_conv = sys.argv[1]
     archi = sys.argv[2]
-    nb_runs = int(sys.argv[3])
+
+
+    out_channels, in_channels, height, width, kernel_h, kernel_w, stride_h, stride_w = input_conv.input_conv[name_conv]
+    batch_size = 1
+
+
+    if archi == "avx2":
+        target = "llvm -mcpu=core-avx2"
+        option_compilation = ["-mavx2", "-mfma"]#, "-O3"]
+    else:
+        target = "llvm -mcpu=skylake-avx512"
+        option_compilation = ["-mavx512f", "-mfma"]#, "-O3"]
+
+    log_file = "autotvm_conv2d.log"
+    ctx = tvm.context(target)
+    dtype = "float32"
+
+    info_tile = parser.parser(name_conv, stride_h)
+
+    if len(info_tile) == 1:
+        s, I = conv2d_ttile_1kernel(name_conv, batch_size, width, height, kernel_w, kernel_h, in_channels, out_channels, info_tile, stride_w, stride_h)
+        A, W, Out = I
+    else:
+        s, I = conv2d_ttile_2kernel(name_conv, batch_size, width, height, kernel_w, kernel_h, in_channels, out_channels, info_tile, stride_w, stride_h)
+        A, W, Out = I
+
+    func = tvm.build(s, [A, W, Out], target=target, name="conv")
 
 
 
-    os.system(f"""(cd {HOME}/matmul_bench && python3 create.py {name_conv} {archi} {nb_runs})""")
-    os.system(f"""(cd {HOME}/matmul_bench/ml_utils && dune exec ./stephane_search.exe)""")
-    os.system(f"""mv {HOME}/matmul_bench/c_bench/gen/gen_conv_vnum*.c {HOME}/tvm_ttile/ttile/tensorize/tensorize_ttile/int_files/""")
-    os.system(f"""mv {HOME}/matmul_bench/ml_utils/*.csv {HOME}/tvm_ttile/ttile/tensorize/tensorize_ttile/result_ttile/""")
-    os.system(f"""mv {HOME}/matmul_bench/ml_utils/*.log {HOME}/tvm_ttile/ttile/tensorize/tensorize_ttile/result_ttile/""")
+    a = tvm.nd.array(np.random.uniform(size=(batch_size, width + kernel_w - 1, height + kernel_h - 1, in_channels)).astype(A.dtype), ctx)
+    w = tvm.nd.array(np.random.uniform(size=(kernel_w, kernel_h, in_channels, out_channels)).astype(W.dtype), ctx)
 
-    cfiles = os.listdir("int_files")
-    random.shuffle(cfiles)
+    o = tvm.nd.array(np.zeros((batch_size, width // stride_h, height // stride_h, out_channels), dtype=dtype), ctx)
+    oo = tvm.nd.array(np.zeros((batch_size, width // stride_h, height // stride_h, out_channels), dtype=dtype), ctx)
 
+    func(a, w, o)
 
-    search_time = time.time() - begin_time
+    tensorize_result = o.asnumpy()
 
-    file_result = open("results/result_" + name_conv + ".csv", "w")
-    file_result.write("IdRun;NameConv;Time(ms);std;NbMicroKernel;AxeFuse;SizeAxeFuse;Schema;Time_search(" + str(search_time) + ")\n")
-    file_result.close()
-
-    for runs in range(nb_runs):
-        
-        os.system(f"""mv {HOME}/tvm_ttile/ttile/tensorize/tensorize_ttile/int_files/{cfiles[runs]} {HOME}/tvm_ttile/ttile/tensorize/tensorize_ttile/c_files/{name_conv}.c""")
-
-        out_channels, in_channels, height, width, kernel_h, kernel_w, stride_h, stride_w = input_conv.input_conv[name_conv]
-        batch_size = 1
-
-        if archi == "avx2":
-            target = "llvm -mcpu=core-avx2"
-            option_compilation = ["-mavx2", "-mfma"]#, "-O3"]
-        else:
-            target = "llvm -mcpu=skylake-avx512"
-            option_compilation = ["-mavx512f", "-mfma"]#, "-O3"]
-
-        log_file = "autotvm_conv2d.log"
-        ctx = tvm.context(target)
-        dtype = "float32"
-
-        info_tile = parser.parser(name_conv, stride_h)
-
-
-        if len(info_tile) == 1:
-            s, I = conv2d_ttile_1kernel(name_conv, batch_size, width, height, kernel_w, kernel_h, in_channels, out_channels, info_tile, stride_w, stride_h)
-            A, W, Out = I
-        else:
-            s, I = conv2d_ttile_2kernel(name_conv, batch_size, width, height, kernel_w, kernel_h, in_channels, out_channels, info_tile, stride_w, stride_h)
-            A, W, Out = I
-
-
-
-
-
-        func = tvm.build(s, [A, W, Out], target=target, name="conv")
-
-
-
-        a = tvm.nd.array(np.random.uniform(size=(batch_size, width + kernel_w - 1, height + kernel_h - 1, in_channels)).astype(A.dtype), ctx)
-        w = tvm.nd.array(np.random.uniform(size=(kernel_w, kernel_h, in_channels, out_channels)).astype(W.dtype), ctx)
-
-        o = tvm.nd.array(np.zeros((batch_size, width // stride_h, height // stride_h, out_channels), dtype=dtype), ctx)
-        oo = tvm.nd.array(np.zeros((batch_size, width // stride_h, height // stride_h, out_channels), dtype=dtype), ctx)
-
-        func(a, w, o)
-
-        tensorize_result = o.asnumpy()
-
-        # evaluate
-        results = []
-        for k in range(20):
-            evaluator = func.time_evaluator(func.entry_name, ctx, number=2, repeat=3)
-
-            results += [(evaluator(a, w, o).mean * 1e3)]
-
-        for k in range(5):
-            results.remove(max(results))
-            results.remove(min(results))
-
-        result = np.mean(results)
-        std = np.std(results)
-        #check result
-
-        from tvm.topi.nn import conv2d_nhwc
-
-        A = te.placeholder((batch_size, width + kernel_w - 1, height + kernel_h - 1, in_channels), name="A")
-        W = te.placeholder((kernel_w, kernel_h, in_channels, out_channels), name="W")
-
-        Out_test = conv2d_nhwc(A, W, stride_h, 0, 1, "float32")
-
-        s = te.create_schedule(Out_test.op)
-
-        f_test = tvm.build(s, [A, W, Out_test], target)
-        f_test(a, w, oo)
-
-        output_conv2d_test = oo.asnumpy()
-
-        tvm.testing.assert_allclose(tensorize_result, output_conv2d_test, rtol=1e-5)
-
-        #NbMicroKernel;AxeFuse;SizeAxeFuse;Schema
-        axe_fuse = ",".join(info_tile[1]["fuse"])
-        size_axe_fuse = info_tile[1]["size_axe_fuse"]
-        schema = info_tile[1]["schema"]
-
-        search_time = time.time() - begin_time
-
-        file_result = open("results/result_" + name_conv + ".csv", "a")
-        file_result.write(str(runs) + ";" + name_conv + ";" + str(result) + ";" + str(std) + ";" + str(len(info_tile)) + ";" + axe_fuse + ";" + str(size_axe_fuse) + ";" + schema + ";" + str(search_time) + "\n")
-        file_result.close()
-
-        os.system("mv c_files/" + name_conv + ".c old_c_files/" + name_conv + "__" + str(runs) + ".c" )
-        if len(info_tile) == 1:
-            os.system("mv tensorize_files/" + name_conv + ".c old_c_files/" + name_conv + "_tensorize__" + str(runs) + ".c" )
-        else:
-            os.system("mv tensorize_files/" + name_conv + "1.c old_c_files/" + name_conv + "1_tensorize__" + str(runs) + ".c" )
-            os.system("mv tensorize_files/" + name_conv + "2.c old_c_files/" + name_conv + "2_tensorize__" + str(runs) + ".c" )
+    # evaluate
+    evaluator = func.time_evaluator(func.entry_name, ctx, number=2, repeat=3)
+    print(evaluator(a, w, o).mean * 1e3)
 

@@ -219,9 +219,9 @@ def factor(variable, order, structure, level_max, split = False):
     for k in order:
         if convert[variable] in k:
             v += 1
-
-    if len(f) >= v and f[-1] == 1:
-        del f[-1]
+    if len(f) != 0:
+        if len(f) >= v and f[-1] == 1:
+            del f[-1]
 
     return f
 
@@ -630,10 +630,12 @@ def parser(name, stride):
         # information for tensorize i.e. factor of tilling
         info_tensorize = {}
 
-        fuse, size_axe_fuse = find_fuse(structure1, level1, order1)
-
         order1 = order(info_order)
         height1 = size["y"] 
+
+        fuse, size_axe_fuse = find_fuse(structure1, level1, order1)
+
+        
 
         level1 -= 1
         info_tensorize[1] = {
