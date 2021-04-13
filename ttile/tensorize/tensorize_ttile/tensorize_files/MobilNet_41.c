@@ -8,8 +8,8 @@ M_TYPE const * const __restrict__ input, M_TYPE const * const __restrict__ param
     IND_TYPE Y, IND_TYPE H,
 	IND_TYPE C, IND_TYPE F, int strideO1, int strideO2, int strideA1, int strideA2, int strideW1, int strideW2, int strideW3) {
 /*
-[V f; U (4, f); ULambda y; U (3, w); T (16, c); Hoist_vars [c]; T (1, x);
-  T (1, w); T (3, h); T (2, y); T (2, f); T (8, c); T (28, x);
+[V f; U (4, f); ULambda y; U (3, w); T (4, c); Hoist_vars [c]; T (7, x);
+  T (1, w); T (3, h); T (2, y); T (2, f); T (32, c); T (4, x);
   Lambda_apply y [((Iter 2), (Arg 4)); ((Iter 1), (Arg 6))]]
 */
 IND_TYPE c, c0, cp_0, c0_p_0, cp_1, f, fp_0, h, hp_0, w, wp_0, x, x0, xp_0, x0_p_0, xp_1, y, y0, yp_0, y0_p_0, yp_1;
@@ -32,12 +32,12 @@ fp_0 = 0;
 y = 0;
 yp_1 = 0;
 						for (h = h0, hp_0 = 0;h < h0 + 3;h += 1, hp_0 += 1){
-							// y = u_y, x = 1, h = 1, w = 3, c = 16, f = 64
+							// y = u_y, x = 7, h = 1, w = 3, c = 4, f = 64
 							// T (w, 1) (3 / 3)
 							for (w = w0, wp_0 = 0;w < w0 + 3;w += 3, wp_0 += 3){
-								// y = u_y, x = 1, h = 1, w = 3, c = 16, f = 64
-								// T (x, 1) (1 / 1)
-								for (x = x0, xp_1 = x0_p_0, xp_0 = 0;x < x0 + 1;x += 1, xp_1 += 1, xp_0 += 1){
+								// y = u_y, x = 7, h = 1, w = 3, c = 4, f = 64
+								// T (x, 7) (7 / 1)
+								for (x = x0, xp_1 = x0_p_0, xp_0 = 0;x < x0 + 7;x += 1, xp_1 += 1, xp_0 += 1){
 											mem_vec_0 = _mm512_loadu_ps(&output[strideO1 * x + strideO2 * y + f]);
 											mem_vec_1 = _mm512_loadu_ps(&output[strideO1 * x + strideO2 * y + f + 16]);
 											mem_vec_2 = _mm512_loadu_ps(&output[strideO1 * x + strideO2 * y + f + 32]);
@@ -54,9 +54,9 @@ yp_1 = 0;
 											mem_vec_13 = _mm512_loadu_ps(&output[strideO1 * x + strideO2 * (y + 3) + f + 16]);
 											mem_vec_14 = _mm512_loadu_ps(&output[strideO1 * x + strideO2 * (y + 3) + f + 32]);
 											mem_vec_15 = _mm512_loadu_ps(&output[strideO1 * x + strideO2 * (y + 3) + f + 48]);
-											// y = u_y, x = 1, h = 1, w = 3, c = 16, f = 64
-											// T (c, 16) (16 / 1)
-											for (c = c0, cp_1 = c0_p_0, cp_0 = 0;c < c0 + 16;c += 1, cp_1 += 1, cp_0 += 1){
+											// y = u_y, x = 1, h = 1, w = 3, c = 4, f = 64
+											// T (c, 4) (4 / 1)
+											for (c = c0, cp_1 = c0_p_0, cp_0 = 0;c < c0 + 4;c += 1, cp_1 += 1, cp_0 += 1){
 												scal_0 = input[strideA1 * (2 * x + w) + strideA2 * (2 * y + h) + c];
 												vec_1 = _mm512_set1_ps(scal_0);
 												vec_2 = _mm512_loadu_ps(&params[strideW1 * w + strideW2 * h + strideW3 * c + f]);
