@@ -661,4 +661,4 @@ def parser(name, stride):
 
     return info_tensorize
 
-print(parser("MobilNet_5", 1))
+#print(parser("MobilNet_5", 1))
