@@ -430,8 +430,7 @@ if __name__ == '__main__':
     os.system(f"""(cd {HOME}/matmul_bench/ml_utils && dune exec ./stephane_search.exe)""")
     os.system(f"""mv {HOME}/matmul_bench/c_bench/gen/gen_conv_vnum*.c {HOME}/tvm_ttile/ttile/tensorize/tensorize_ttile/int_files/""")
     os.system(f"""mv {HOME}/matmul_bench/ml_utils/*.csv {HOME}/tvm_ttile/ttile/tensorize/tensorize_ttile/result_ttile/""")
-    os.system(f"""mv {HOME}/matmul_bench/ml_utils/*.log {HOME}/tvm_ttile/ttile/tensorize/tensorize_ttile/result_ttile/""")
-
+    
     cfiles = os.listdir("int_files")
     random.shuffle(cfiles)
 
@@ -462,7 +461,6 @@ if __name__ == '__main__':
 
         info_tile = parser.parser(name_conv, stride_h)
 
-
         if len(info_tile) == 1:
             s, I = conv2d_ttile_1kernel(name_conv, batch_size, width, height, kernel_w, kernel_h, in_channels, out_channels, info_tile, stride_w, stride_h)
             A, W, Out = I
@@ -488,19 +486,7 @@ if __name__ == '__main__':
 
         tensorize_result = o.asnumpy()
 
-        # evaluate
-        results = []
-        for k in range(20):
-            evaluator = func.time_evaluator(func.entry_name, ctx, number=2, repeat=3)
-
-            results += [(evaluator(a, w, o).mean * 1e3)]
-
-        for k in range(5):
-            results.remove(max(results))
-            results.remove(min(results))
-
-        result = np.mean(results)
-        std = np.std(results)
+        
         #check result
 
         from tvm.topi.nn import conv2d_nhwc
@@ -518,6 +504,20 @@ if __name__ == '__main__':
         output_conv2d_test = oo.asnumpy()
 
         tvm.testing.assert_allclose(tensorize_result, output_conv2d_test, rtol=1e-5)
+
+        # evaluate
+        results = []
+        for k in range(20):
+            evaluator = func.time_evaluator(func.entry_name, ctx, number=2, repeat=3)
+
+            results += [(evaluator(a, w, o).mean * 1e3)]
+
+        for k in range(5):
+            results.remove(max(results))
+            results.remove(min(results))
+
+        result = np.mean(results)
+        std = np.std(results)
 
         #NbMicroKernel;AxeFuse;SizeAxeFuse;Schema
         axe_fuse = ",".join(info_tile[1]["fuse"])
