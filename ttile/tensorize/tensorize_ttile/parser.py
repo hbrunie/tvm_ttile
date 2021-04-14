@@ -245,25 +245,25 @@ def find_size_tensorize(variable, lorder, level, factors, height_y):
         "h": "axe_h"
     }
     variable = convert[variable]
-    id = 0
+    id_ = 0
     for k in range(level):
         if variable in lorder[k]:
-            id += 1
-    if id == 0:
+            id_ += 1
+    if id_ == 0:
         if letter == "y":
             return height_y
         else:
             return size[letter]
     else:
-        return factors[id - 1]
+        return factors[id_ - 1]
 
-def find_loop_to_delete(structure, id):
+def find_loop_to_delete(structure, id_):
     """
     Find the index in structure where level == id
     """
     index = []
     for k in range(len(structure)):
-        if structure[k][3] == id:
+        if structure[k][3] == id_:
             index += [k]
     return index
 
@@ -345,8 +345,8 @@ def compute_structure(f):
                 pile_bracket.append(len(structure) - 1)
             if "}" in f[k]:
                 level -= 1
-                id = pile_bracket.pop()
-                structure[id][2] = k
+                id_ = pile_bracket.pop()
+                structure[id_][2] = k
         return structure
 
     s_ = compute_structure_(f)
