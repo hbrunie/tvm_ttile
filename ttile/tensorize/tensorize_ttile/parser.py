@@ -246,7 +246,7 @@ def find_size_tensorize(variable, lorder, level, factors, height_y):
     }
     variable = convert[variable]
     id_ = 0
-    for k in range(level):
+    for k in range(level - 1):
         if variable in lorder[k]:
             id_ += 1
     if id_ == 0:
@@ -634,11 +634,11 @@ def parser(name, stride):
         info_tensorize = {}
 
         order1 = order(info_order)
-        height1 = size["y"] 
+        height1 = size["y"]
 
         fuse, size_axe_fuse = find_fuse(structure1, level1, order1)
 
-        
+
 
         level1 -= 1
         info_tensorize[1] = {
@@ -663,5 +663,3 @@ def parser(name, stride):
         }
 
     return info_tensorize
-
-#print(parser("MobilNet_5", 1))
