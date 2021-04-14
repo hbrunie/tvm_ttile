@@ -255,7 +255,10 @@ def find_size_tensorize(variable, lorder, level, factors, height_y):
         else:
             return size[letter]
     else:
-        return factors[id_ - 1]
+        if len(factors) == 0:
+            return 1
+        else:
+            return factors[id_ - 1]
 
 def find_loop_to_delete(structure, id_):
     """
