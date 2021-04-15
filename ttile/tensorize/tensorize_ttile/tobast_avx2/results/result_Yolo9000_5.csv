@@ -1,3 +1,0 @@
-IdRun;NameConv;Time(ms);std;NbMicroKernel;AxeFuse;SizeAxeFuse;Schema;Time_search(317.7697505950928)
-0;Yolo9000_5;1.7882923833333333;0.006058962773835328;1;axe_xx_0,axe_yy_0,axe_xx_1,axe_yy_1,axe_out_channels_0,axe_yy_2;31;[V f, U (4, f), U (4, y), T (128, c), Hoist_vars [c], T (17, x), T (17, y),  T (2, f), T (2, y), T (1, x), T (1, y), T (8, x)];318.7840392589569
-1;Yolo9000_5;1.6733281666666664;0.0018286903905376081;1;axe_xx_0,axe_yy_0,axe_xx_1,axe_yy_1,axe_out_channels_0,axe_yy_2;27;[V f, U (4, f), U (4, y), T (128, c), Hoist_vars [c], T (34, x), T (2, y),  T (2, f), T (1, y), T (1, x), T (17, y), T (4, x)];319.762576341629
