@@ -429,7 +429,7 @@ if __name__ == '__main__':
     os.system(f"""(cd {HOME}/matmul_bench && python3 create.py {name_conv} {archi} {nb_runs})""")
     os.system(f"""(cd {HOME}/matmul_bench/ml_utils && dune exec ./stephane_search.exe)""")
     os.system(f"""mv {HOME}/matmul_bench/c_bench/gen/gen_conv_vnum*.c {HOME}/tvm_ttile/ttile/tensorize/tensorize_ttile/int_files/""")
-    os.system(f"""mv {HOME}/matmul_bench/ml_utils/*.csv {HOME}/tvm_ttile/ttile/tensorize/tensorize_ttile/result_ttile/""")
+    #os.system(f"""mv {HOME}/matmul_bench/ml_utils/*.csv {HOME}/tvm_ttile/ttile/tensorize/tensorize_ttile/result_ttile/""")
 
     cfiles = os.listdir("int_files")
     random.shuffle(cfiles)
@@ -443,25 +443,26 @@ if __name__ == '__main__':
 
     for runs in range(len(cfiles)):
 
-        os.system(f"""mv {HOME}/tvm_ttile/ttile/tensorize/tensorize_ttile/int_files/{cfiles[runs]} {HOME}/tvm_ttile/ttile/tensorize/tensorize_ttile/c_files/{name_conv}.c""")
-
-        out_channels, in_channels, height, width, kernel_h, kernel_w, stride_h, stride_w = input_conv.input_conv[name_conv]
-        batch_size = 1
-
-        if archi == "avx2":
-            target = "llvm -mcpu=core-avx2"
-            option_compilation = ["-mavx2", "-mfma"]#, "-O3"]
-        else:
-            target = "llvm -mcpu=skylake-avx512"
-            option_compilation = ["-mavx512f", "-mfma"]#, "-O3"]
-
-        log_file = "autotvm_conv2d.log"
-        ctx = tvm.context(target)
-        dtype = "float32"
-
         try:
 
+            os.system(f"""mv {HOME}/tvm_ttile/ttile/tensorize/tensorize_ttile/int_files/{cfiles[runs]} {HOME}/tvm_ttile/ttile/tensorize/tensorize_ttile/c_files/{name_conv}.c""")
+
+            out_channels, in_channels, height, width, kernel_h, kernel_w, stride_h, stride_w = input_conv.input_conv[name_conv]
+            batch_size = 1
+
+            if archi == "avx2":
+                target = "llvm -mcpu=core-avx2"
+                option_compilation = ["-mavx2", "-mfma"]#, "-O3"]
+            else:
+                target = "llvm -mcpu=skylake-avx512"
+                option_compilation = ["-mavx512f", "-mfma"]#, "-O3"]
+
+            log_file = "autotvm_conv2d.log"
+            ctx = tvm.context(target)
+            dtype = "float32"
+
             info_tile = parser.parser(name_conv, stride_h)
+            print(info_tile)
 
             if len(info_tile) == 1:
                 s, I = conv2d_ttile_1kernel(name_conv, batch_size, width, height, kernel_w, kernel_h, in_channels, out_channels, info_tile, stride_w, stride_h)
@@ -538,6 +539,6 @@ if __name__ == '__main__':
             else:
                 os.system("mv tensorize_files/" + name_conv + "1.c old_c_files/" + name_conv + "1_tensorize__" + str(runs) + ".c" )
                 os.system("mv tensorize_files/" + name_conv + "2.c old_c_files/" + name_conv + "2_tensorize__" + str(runs) + ".c" )
-
+        #else:
         except:
             pass

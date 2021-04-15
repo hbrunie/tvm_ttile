@@ -1,1 +1,5 @@
-IdRun;NameConv;Time(ms);std;NbMicroKernel;AxeFuse;SizeAxeFuse;Schema;Time_search(528.8464086055756)
+IdRun;NameConv;Time(ms);std;NbMicroKernel;AxeFuse;SizeAxeFuse;Schema;Time_search(3.4024510383605957)
+1;ResNet18_1;1.1419733166666668;0.007911645755344187;1;axe_yy_0,axe_out_channels_0,axe_yy_1,axe_xx_0;22;[V f, U (2, f), U (14, y), T (3, c), Hoist_vars [c], T (8, x), T (1, c),  T (7, w), T (7, h), T (14, x), T (2, y), T (2, f), T (4, y)];5.88606858253479
+4;ResNet18_1;0.48114318333333345;0.00603431077968588;1;axe_yy_0,axe_out_channels_0,axe_yy_1,axe_xx_0;39;[V f, U (2, f), U (14, y), T (3, c), Hoist_vars [c], T (4, x), T (1, c),  T (7, w), T (7, h), T (28, x), T (1, y), T (2, f), T (8, y)];9.534794569015503
+5;ResNet18_1;3.8184710333333327;0.0041115626103574695;1;axe_yy_0;2;[V f, U (2, f), ULambda y, T (3, c), Hoist_vars [c], T (16, x), T (1, c),  T (7, w), T (7, h), T (7, x),  Lambda_apply y [((Iter 4), (Arg 11)), ((Iter 1), (Arg 12))], T (2, f),  T (2, y)];11.273839712142944
+6;ResNet18_1;3.126839733333333;0.0014965538899604956;1;axe_yy_0;2;[V f, U (2, f), ULambda y, T (3, c), Hoist_vars [c], T (4, x), T (1, c),  T (7, w), T (7, h), T (28, x),  Lambda_apply y [((Iter 4), (Arg 11)), ((Iter 1), (Arg 12))], T (2, f),  T (2, y)];12.950679540634155

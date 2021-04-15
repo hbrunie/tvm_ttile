@@ -1,1 +1,2 @@
-IdRun;NameConv;Time(ms);std;NbMicroKernel;AxeFuse;SizeAxeFuse;Schema;Time_search(0.29804062843322754)
+IdRun;NameConv;Time(ms);std;NbMicroKernel;AxeFuse;SizeAxeFuse;Schema;Time_search(2.157886266708374)
+0;ResNet18_11;0.041386099999999995;0.0001569764702820876;1;axe_out_channels_0,axe_yy_0,axe_out_channels_1;7;[V f, U (4, f), U (7, y), T (128, c), Hoist_vars [c], T (7, x), T (2, c),  T (2, f), T (1, y), T (4, f)];2.9711952209472656
