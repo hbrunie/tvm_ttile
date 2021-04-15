@@ -430,7 +430,7 @@ if __name__ == '__main__':
     os.system(f"""(cd {HOME}/matmul_bench/ml_utils && dune exec ./stephane_search.exe)""")
     os.system(f"""mv {HOME}/matmul_bench/c_bench/gen/gen_conv_vnum*.c {HOME}/tvm_ttile/ttile/tensorize/tensorize_ttile/int_files/""")
     os.system(f"""mv {HOME}/matmul_bench/ml_utils/*.csv {HOME}/tvm_ttile/ttile/tensorize/tensorize_ttile/result_ttile/""")
-    
+
     cfiles = os.listdir("int_files")
     random.shuffle(cfiles)
 
@@ -442,7 +442,7 @@ if __name__ == '__main__':
     file_result.close()
 
     for runs in range(nb_runs):
-        
+
         os.system(f"""mv {HOME}/tvm_ttile/ttile/tensorize/tensorize_ttile/int_files/{cfiles[runs]} {HOME}/tvm_ttile/ttile/tensorize/tensorize_ttile/c_files/{name_conv}.c""")
 
         out_channels, in_channels, height, width, kernel_h, kernel_w, stride_h, stride_w = input_conv.input_conv[name_conv]
@@ -459,81 +459,85 @@ if __name__ == '__main__':
         ctx = tvm.context(target)
         dtype = "float32"
 
-        info_tile = parser.parser(name_conv, stride_h)
+        try:
 
-        if len(info_tile) == 1:
-            s, I = conv2d_ttile_1kernel(name_conv, batch_size, width, height, kernel_w, kernel_h, in_channels, out_channels, info_tile, stride_w, stride_h)
-            A, W, Out = I
-        else:
-            s, I = conv2d_ttile_2kernel(name_conv, batch_size, width, height, kernel_w, kernel_h, in_channels, out_channels, info_tile, stride_w, stride_h)
-            A, W, Out = I
+            info_tile = parser.parser(name_conv, stride_h)
 
-
-
-
-
-        func = tvm.build(s, [A, W, Out], target=target, name="conv")
+            if len(info_tile) == 1:
+                s, I = conv2d_ttile_1kernel(name_conv, batch_size, width, height, kernel_w, kernel_h, in_channels, out_channels, info_tile, stride_w, stride_h)
+                A, W, Out = I
+            else:
+                s, I = conv2d_ttile_2kernel(name_conv, batch_size, width, height, kernel_w, kernel_h, in_channels, out_channels, info_tile, stride_w, stride_h)
+                A, W, Out = I
 
 
 
-        a = tvm.nd.array(np.random.uniform(size=(batch_size, width + kernel_w - 1, height + kernel_h - 1, in_channels)).astype(A.dtype), ctx)
-        w = tvm.nd.array(np.random.uniform(size=(kernel_w, kernel_h, in_channels, out_channels)).astype(W.dtype), ctx)
 
-        o = tvm.nd.array(np.zeros((batch_size, width // stride_h, height // stride_h, out_channels), dtype=dtype), ctx)
-        oo = tvm.nd.array(np.zeros((batch_size, width // stride_h, height // stride_h, out_channels), dtype=dtype), ctx)
 
-        func(a, w, o)
+            func = tvm.build(s, [A, W, Out], target=target, name="conv")
 
-        tensorize_result = o.asnumpy()
 
-        
-        #check result
 
-        from tvm.topi.nn import conv2d_nhwc
+            a = tvm.nd.array(np.random.uniform(size=(batch_size, width + kernel_w - 1, height + kernel_h - 1, in_channels)).astype(A.dtype), ctx)
+            w = tvm.nd.array(np.random.uniform(size=(kernel_w, kernel_h, in_channels, out_channels)).astype(W.dtype), ctx)
 
-        A = te.placeholder((batch_size, width + kernel_w - 1, height + kernel_h - 1, in_channels), name="A")
-        W = te.placeholder((kernel_w, kernel_h, in_channels, out_channels), name="W")
+            o = tvm.nd.array(np.zeros((batch_size, width // stride_h, height // stride_h, out_channels), dtype=dtype), ctx)
+            oo = tvm.nd.array(np.zeros((batch_size, width // stride_h, height // stride_h, out_channels), dtype=dtype), ctx)
 
-        Out_test = conv2d_nhwc(A, W, stride_h, 0, 1, "float32")
+            func(a, w, o)
 
-        s = te.create_schedule(Out_test.op)
+            tensorize_result = o.asnumpy()
 
-        f_test = tvm.build(s, [A, W, Out_test], target)
-        f_test(a, w, oo)
 
-        output_conv2d_test = oo.asnumpy()
+            #check result
 
-        tvm.testing.assert_allclose(tensorize_result, output_conv2d_test, rtol=1e-5)
+            from tvm.topi.nn import conv2d_nhwc
 
-        # evaluate
-        results = []
-        for k in range(20):
-            evaluator = func.time_evaluator(func.entry_name, ctx, number=2, repeat=3)
+            A = te.placeholder((batch_size, width + kernel_w - 1, height + kernel_h - 1, in_channels), name="A")
+            W = te.placeholder((kernel_w, kernel_h, in_channels, out_channels), name="W")
 
-            results += [(evaluator(a, w, o).mean * 1e3)]
+            Out_test = conv2d_nhwc(A, W, stride_h, 0, 1, "float32")
 
-        for k in range(5):
-            results.remove(max(results))
-            results.remove(min(results))
+            s = te.create_schedule(Out_test.op)
 
-        result = np.mean(results)
-        std = np.std(results)
+            f_test = tvm.build(s, [A, W, Out_test], target)
+            f_test(a, w, oo)
 
-        #NbMicroKernel;AxeFuse;SizeAxeFuse;Schema
-        axe_fuse = ",".join(info_tile[1]["fuse"])
-        size_axe_fuse = info_tile[1]["size_axe_fuse"]
-        schema = info_tile[1]["schema"]
+            output_conv2d_test = oo.asnumpy()
 
-        search_time = time.time() - begin_time
+            tvm.testing.assert_allclose(tensorize_result, output_conv2d_test, rtol=1e-5)
 
-        file_result = open("results/result_" + name_conv + ".csv", "a")
-        file_result.write(str(runs) + ";" + name_conv + ";" + str(result) + ";" + str(std) + ";" + str(len(info_tile)) + ";" + axe_fuse + ";" + str(size_axe_fuse) + ";" + schema + ";" + str(search_time) + "\n")
-        file_result.close()
+            # evaluate
+            results = []
+            for k in range(20):
+                evaluator = func.time_evaluator(func.entry_name, ctx, number=2, repeat=3)
 
-        os.system("mv c_files/" + name_conv + ".c old_c_files/" + name_conv + "__" + str(runs) + ".c" )
-        if len(info_tile) == 1:
-            os.system("mv tensorize_files/" + name_conv + ".c old_c_files/" + name_conv + "_tensorize__" + str(runs) + ".c" )
-        else:
-            os.system("mv tensorize_files/" + name_conv + "1.c old_c_files/" + name_conv + "1_tensorize__" + str(runs) + ".c" )
-            os.system("mv tensorize_files/" + name_conv + "2.c old_c_files/" + name_conv + "2_tensorize__" + str(runs) + ".c" )
+                results += [(evaluator(a, w, o).mean * 1e3)]
 
+            for k in range(5):
+                results.remove(max(results))
+                results.remove(min(results))
+
+            result = np.mean(results)
+            std = np.std(results)
+
+            #NbMicroKernel;AxeFuse;SizeAxeFuse;Schema
+            axe_fuse = ",".join(info_tile[1]["fuse"])
+            size_axe_fuse = info_tile[1]["size_axe_fuse"]
+            schema = info_tile[1]["schema"]
+
+            search_time = time.time() - begin_time
+
+            file_result = open("results/result_" + name_conv + ".csv", "a")
+            file_result.write(str(runs) + ";" + name_conv + ";" + str(result) + ";" + str(std) + ";" + str(len(info_tile)) + ";" + axe_fuse + ";" + str(size_axe_fuse) + ";" + schema + ";" + str(search_time) + "\n")
+            file_result.close()
+
+            os.system("mv c_files/" + name_conv + ".c old_c_files/" + name_conv + "__" + str(runs) + ".c" )
+            if len(info_tile) == 1:
+                os.system("mv tensorize_files/" + name_conv + ".c old_c_files/" + name_conv + "_tensorize__" + str(runs) + ".c" )
+            else:
+                os.system("mv tensorize_files/" + name_conv + "1.c old_c_files/" + name_conv + "1_tensorize__" + str(runs) + ".c" )
+                os.system("mv tensorize_files/" + name_conv + "2.c old_c_files/" + name_conv + "2_tensorize__" + str(runs) + ".c" )
+
+        except:
+            pass
