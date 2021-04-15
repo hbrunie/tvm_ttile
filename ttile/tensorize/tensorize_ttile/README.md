@@ -17,6 +17,17 @@ pip3 install numpy decorator attrs tornado psutil xgboost cloudpickle pytest
 
 git clone git@gitlab.inria.fr:ntollena/matmul_bench.git
 (cd matmul_bench && git checkout stephane_metric)
+
+
+apt install opam
+# environment setup
+opam init
+eval `opam env`
+# install given version of the compiler
+opam switch create 4.12.0
+eval `opam env`
+# check you got what you want
+which ocaml
 ```
 
 Export
