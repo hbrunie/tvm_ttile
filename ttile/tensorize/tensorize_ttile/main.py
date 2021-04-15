@@ -441,7 +441,7 @@ if __name__ == '__main__':
     file_result.write("IdRun;NameConv;Time(ms);std;NbMicroKernel;AxeFuse;SizeAxeFuse;Schema;Time_search(" + str(search_time) + ")\n")
     file_result.close()
 
-    for runs in range(nb_runs):
+    for runs in range(len(cfiles)):
 
         os.system(f"""mv {HOME}/tvm_ttile/ttile/tensorize/tensorize_ttile/int_files/{cfiles[runs]} {HOME}/tvm_ttile/ttile/tensorize/tensorize_ttile/c_files/{name_conv}.c""")
 
