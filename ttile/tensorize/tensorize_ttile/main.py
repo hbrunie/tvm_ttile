@@ -444,6 +444,7 @@ if __name__ == '__main__':
     for runs in range(len(cfiles)):
 
         try:
+        #if True:
 
             os.system(f"""mv {HOME}/tvm_ttile/ttile/tensorize/tensorize_ttile/int_files/{cfiles[runs]} {HOME}/tvm_ttile/ttile/tensorize/tensorize_ttile/c_files/{name_conv}.c""")
 
