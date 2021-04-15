@@ -510,11 +510,26 @@ if __name__ == '__main__':
             tvm.testing.assert_allclose(tensorize_result, output_conv2d_test, rtol=1e-5)
 
             # evaluate
+
+            dtype = "float32"
+            aa = np.random.uniform(size=(batch_size, width + kernel_w - 1, height + kernel_h - 1, in_channels))
+            ww = np.random.uniform(size=(kernel_w, kernel_h, in_channels, out_channels))
+            oo = np.zeros((batch_size, width // stride_h, height // stride_h, out_channels), dtype=dtype)
+
+            la = []
+            lw = []
+            lo = []
+
+            for k in range(20):
+                la += [tvm.nd.array(aa.copy().astype(A.dtype), ctx)]
+                lw += [tvm.nd.array(ww.copy().astype(W.dtype), ctx)]
+                lo += [tvm.nd.array(oo.copy(), ctx)]
+
+            # evaluate
             results = []
             for k in range(20):
-                evaluator = func.time_evaluator(func.entry_name, ctx, number=2, repeat=3)
-
-                results += [(evaluator(a, w, o).mean * 1e3)]
+                evaluator = func.time_evaluator(func.entry_name, ctx, number=1, repeat=1)
+                results += [(evaluator(la[k], lw[k], lo[k]).mean * 1e3)]
 
             for k in range(5):
                 results.remove(max(results))

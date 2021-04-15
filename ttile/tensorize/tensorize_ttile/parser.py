@@ -649,7 +649,7 @@ def parser(name, stride):
 
 
 
-        level1 -= 1
+        #level1 -= 1
         info_tensorize[1] = {
             "factor_out_channels": factor("f", order1, structure1, level1),
             "factor_xx": factor("x", order1, structure1, level1),
@@ -658,8 +658,8 @@ def parser(name, stride):
             "factor_w": factor("w", order1, structure1, level1),
             "factor_in_channels": factor("c", order1, structure1, level1),
             "order": order1,
-            "nb_loop_no_tensorize": level1 ,
-            "axe_to_tensorize": order1[level1 ],
+            "nb_loop_no_tensorize": level1 - 1,
+            "axe_to_tensorize": order1[level1 - 1],
             "h_t": find_size_tensorize("h", order1, level1, [], height1),
             "w_t": find_size_tensorize("w", order1, level1, [], height1),
             "f_t": find_size_tensorize("f", order1, level1, factor("f", order1, structure1, level1), height1),
