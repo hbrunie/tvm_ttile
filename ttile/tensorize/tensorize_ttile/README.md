@@ -30,6 +30,11 @@ eval `opam env`
 which ocaml
 ```
 
+```
+cd matmul_bench
+sh install.sh
+```
+
 Export
 -----
 ```
