@@ -219,6 +219,7 @@ def factor(variable, order, structure, level_max, split = False):
     for k in order:
         if convert[variable] in k:
             v += 1
+    # print(variable, f, v)
     if len(f) != 0:
         if len(f) >= v and f[-1] == 1:
             del f[-1]
@@ -229,13 +230,6 @@ def find_size_tensorize(variable, lorder, level, factors, height_y):
     """
     Find the size of variable inside the tensorize function
     """
-    letter = variable
-    if len(factors) == 0:
-        if variable == "y":
-            return height_y
-        else:
-            return size[variable]
-    axe_to_tensorize = lorder[level - 1]
     convert = {
         "f": "axe_out_channels",
         "c": "axe_in_channels",
@@ -244,6 +238,21 @@ def find_size_tensorize(variable, lorder, level, factors, height_y):
         "w": "axe_w",
         "h": "axe_h"
     }
+    letter = variable
+    if len(factors) == 0:
+        if variable == "y":
+            return height_y
+        else:
+            id_ = 0
+            for k in range(level - 1):
+                if convert[variable] in lorder[k]:
+                    id_ += 1
+            if id_ == 0:
+                return size[variable]
+            else:
+                return 1
+    axe_to_tensorize = lorder[level - 1]
+    
     variable = convert[variable]
     id_ = 0
     for k in range(level - 1):
@@ -663,3 +672,4 @@ def parser(name, stride):
         }
 
     return info_tensorize
+
