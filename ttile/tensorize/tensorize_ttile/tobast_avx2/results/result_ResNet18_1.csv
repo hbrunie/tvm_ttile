@@ -1,0 +1,4 @@
+IdRun;NameConv;Time(ms);std;NbMicroKernel;AxeFuse;SizeAxeFuse;Schema;Time_search(296.9679026603699)
+0;ResNet18_1;1.6974571666666667;0.004462739742081663;1;axe_out_channels_0,axe_yy_0,axe_xx_0,axe_out_channels_1,axe_yy_1;21;[V f, U (4, f), U (4, y), T (3, c), Hoist_vars [c], T (56, x), T (7, w),  T (7, h), T (2, y), T (2, f), T (2, x), T (14, y), T (1, f)];298.06777143478394
+1;ResNet18_1;2.5698679833333333;0.002458960173698072;1;axe_out_channels_0,axe_yy_0,axe_xx_0;11;[V f, U (4, f), ULambda y, T (3, c), Hoist_vars [c], T (56, x), T (7, w),  T (7, h), Lambda_apply y [((Iter 1), (Arg 4)), ((Iter 2), (Arg 5))],  T (2, f), T (2, x), T (8, y), T (1, f)];299.3370840549469
+2;ResNet18_1;3.447020466666667;0.029297447997678253;1;axe_out_channels_0,axe_yy_0,axe_xx_0;12;[V f, U (4, f), ULambda y, T (3, c), Hoist_vars [c], T (56, x), T (7, w),  T (7, h), Lambda_apply y [((Iter 1), (Arg 4)), ((Iter 2), (Arg 5))],  T (1, f), T (2, x), T (8, y), T (2, f)];300.72030901908875
