@@ -7,10 +7,11 @@ M_TYPE const * const __restrict__ input, M_TYPE const * const __restrict__ param
     IND_TYPE Y, IND_TYPE H,
 	IND_TYPE C, IND_TYPE F) {
 /*
-[V f; U (2, f); U (7, y); U (3, w); T (32, c); Hoist_vars [c]; T (3, h);
-  T (112, x); T (16, y); T (1, c); T (1, y)]
+[V f; U (2, f); ULambda y; T (32, c); Hoist_vars [c]; T (3, w); T (3, h);
+  T (112, x); T (1, y); T (1, c);
+  Lambda_apply y [((Iter 9), (Arg 11)); ((Iter 1), (Arg 13))]]
 */
-IND_TYPE c, cp_0, c351_p_0, cp_1, c351, h, hp_0, x, xp_0, y, yp_0, y312_p_0, yp_1, y312;
+IND_TYPE c, cp_0, c414_p_0, cp_1, c414, h, hp_0, w, wp_0, x, xp_0, y, yp_0, y375_p_0, yp_1, y375;
 
 assert((Y == 112));
 assert((X == 112));
@@ -18,309 +19,454 @@ assert((H == 3));
 assert((W == 3));
 assert((C == 32));
 assert((F == 32));
-IND_TYPE y313 = 0;
-IND_TYPE x312 = 0;
-IND_TYPE h189 = 0;
-IND_TYPE w = 0;
-IND_TYPE c352 = 0;
+IND_TYPE y376 = 0;
+IND_TYPE x354 = 0;
+IND_TYPE h226 = 0;
+IND_TYPE w199 = 0;
+IND_TYPE c415 = 0;
 IND_TYPE f = 0;
-float scal_0 ,scal_1 ,scal_10 ,scal_11 ,scal_12 ,scal_13 ,scal_14 ,scal_15 ,scal_16 ,scal_17 ,scal_18 ,scal_19 ,scal_2 ,scal_20 ,scal_3 ,scal_4 ,scal_5 ,scal_6 ,scal_7 ,scal_8 ,scal_9;
-__m512 mem_vec_3043 ,mem_vec_3044 ,mem_vec_3045 ,mem_vec_3046 ,mem_vec_3047 ,mem_vec_3048 ,mem_vec_3049 ,mem_vec_3050 ,mem_vec_3051 ,mem_vec_3052 ,mem_vec_3053 ,mem_vec_3054 ,mem_vec_3055 ,mem_vec_3056 ,vec_0 ,vec_1 ,vec_10 ,vec_11 ,vec_12 ,vec_13 ,vec_14 ,vec_15 ,vec_16 ,vec_17 ,vec_18 ,vec_19 ,vec_2 ,vec_20 ,vec_21 ,vec_22 ,vec_23 ,vec_24 ,vec_25 ,vec_26 ,vec_27 ,vec_28 ,vec_29 ,vec_3 ,vec_30 ,vec_31 ,vec_32 ,vec_33 ,vec_34 ,vec_35 ,vec_36 ,vec_37 ,vec_38 ,vec_39 ,vec_4 ,vec_40 ,vec_41 ,vec_42 ,vec_43 ,vec_44 ,vec_45 ,vec_46 ,vec_47 ,vec_48 ,vec_49 ,vec_5 ,vec_50 ,vec_51 ,vec_52 ,vec_53 ,vec_54 ,vec_55 ,vec_56 ,vec_57 ,vec_58 ,vec_59 ,vec_6 ,vec_60 ,vec_61 ,vec_62 ,vec_63 ,vec_64 ,vec_65 ,vec_66 ,vec_67 ,vec_68 ,vec_7 ,vec_8 ,vec_9;
-// y = 112, x = 112, h = 3, w = 3, c = 32, f = 32
-// T (y, 1) (112 / 112)
-for (y312 = y313, y312_p_0 = 0;
-	y312 < y313 + 112;
-	y312 += 112, y312_p_0 += 112){
-	// y = 112, x = 112, h = 3, w = 3, c = 32, f = 32
-	// T (c, 1) (32 / 32)
-	for (c351 = c352, c351_p_0 = 0;
-		c351 < c352 + 32;
-		c351 += 32, c351_p_0 += 32){
-		// y = 112, x = 112, h = 3, w = 3, c = 32, f = 32
-		// T (y, 16) (112 / 7)
-		for (y = y312, yp_1 = y312_p_0, yp_0 = 0;
-			y < y312 + 112;
-			y += 7, yp_1 += 7, yp_0 += 7){
-			// y = 7, x = 112, h = 3, w = 3, c = 32, f = 32
-			// T (x, 112) (112 / 1)
-			for (x = x312, xp_0 = 0;
-				x < x312 + 112;
-				x += 1, xp_0 += 1){
-				// y = 7, x = 1, h = 3, w = 3, c = 32, f = 32
-				// T (h, 3) (3 / 1)
-				for (h = h189, hp_0 = 0;
-					h < h189 + 3;
-					h += 1, hp_0 += 1){
-							mem_vec_3043 = _mm512_loadu_ps(&output[(F * Y) * x + F * y + f]);
-							mem_vec_3044 = _mm512_loadu_ps(&output[(F * Y) * x + F * y + f + 16]);
-							mem_vec_3045 = _mm512_loadu_ps(&output[(F * Y) * x + F * (y + 1) + f]);
-							mem_vec_3046 = _mm512_loadu_ps(&output[(F * Y) * x + F * (y + 1) + f + 16]);
-							mem_vec_3047 = _mm512_loadu_ps(&output[(F * Y) * x + F * (y + 2) + f]);
-							mem_vec_3048 = _mm512_loadu_ps(&output[(F * Y) * x + F * (y + 2) + f + 16]);
-							mem_vec_3049 = _mm512_loadu_ps(&output[(F * Y) * x + F * (y + 3) + f]);
-							mem_vec_3050 = _mm512_loadu_ps(&output[(F * Y) * x + F * (y + 3) + f + 16]);
-							mem_vec_3051 = _mm512_loadu_ps(&output[(F * Y) * x + F * (y + 4) + f]);
-							mem_vec_3052 = _mm512_loadu_ps(&output[(F * Y) * x + F * (y + 4) + f + 16]);
-							mem_vec_3053 = _mm512_loadu_ps(&output[(F * Y) * x + F * (y + 5) + f]);
-							mem_vec_3054 = _mm512_loadu_ps(&output[(F * Y) * x + F * (y + 5) + f + 16]);
-							mem_vec_3055 = _mm512_loadu_ps(&output[(F * Y) * x + F * (y + 6) + f]);
-							mem_vec_3056 = _mm512_loadu_ps(&output[(F * Y) * x + F * (y + 6) + f + 16]);
-							// y = 7, x = 1, h = 1, w = 3, c = 32, f = 32
-							// T (c, 32) (32 / 1)
-							for (c = c351, cp_1 = c351_p_0, cp_0 = 0;
-								c < c351 + 32;
-								c += 1, cp_1 += 1, cp_0 += 1){
-								scal_0 = input[(C * (Y + H - 1)) * (x + w) + C * (y + h) + c];
-								vec_1 = _mm512_set1_ps(scal_0);
-								vec_2 = _mm512_loadu_ps(&params[((F * C) * H) * w + (F * C) * h + F * c + f]);
+float scal_0 ,scal_1 ,scal_10 ,scal_11 ,scal_12 ,scal_2 ,scal_3 ,scal_4 ,scal_5 ,scal_6 ,scal_7 ,scal_8 ,scal_9;
+__m512 mem_vec_3679 ,mem_vec_3680 ,mem_vec_3681 ,mem_vec_3682 ,mem_vec_3683 ,mem_vec_3684 ,mem_vec_3685 ,mem_vec_3686 ,mem_vec_3687 ,mem_vec_3688 ,mem_vec_3689 ,mem_vec_3690 ,mem_vec_3691 ,mem_vec_3692 ,mem_vec_3693 ,mem_vec_3694 ,mem_vec_3695 ,mem_vec_3696 ,mem_vec_3697 ,mem_vec_3698 ,mem_vec_3699 ,mem_vec_3700 ,mem_vec_3701 ,mem_vec_3702 ,mem_vec_3703 ,mem_vec_3704 ,mem_vec_3705 ,mem_vec_3706 ,mem_vec_3707 ,mem_vec_3708 ,mem_vec_3709 ,mem_vec_3710 ,mem_vec_3711 ,mem_vec_3712 ,mem_vec_3713 ,mem_vec_3714 ,mem_vec_3715 ,mem_vec_3716 ,mem_vec_3717 ,mem_vec_3718 ,mem_vec_3719 ,mem_vec_3720 ,mem_vec_3721 ,mem_vec_3722 ,mem_vec_3723 ,mem_vec_3724 ,mem_vec_3725 ,mem_vec_3726 ,vec_0 ,vec_1 ,vec_10 ,vec_11 ,vec_12 ,vec_13 ,vec_14 ,vec_15 ,vec_16 ,vec_17 ,vec_18 ,vec_19 ,vec_2 ,vec_20 ,vec_21 ,vec_22 ,vec_23 ,vec_24 ,vec_25 ,vec_26 ,vec_27 ,vec_28 ,vec_29 ,vec_3 ,vec_30 ,vec_31 ,vec_32 ,vec_33 ,vec_34 ,vec_35 ,vec_36 ,vec_37 ,vec_38 ,vec_39 ,vec_4 ,vec_40 ,vec_5 ,vec_6 ,vec_7 ,vec_8 ,vec_9;
+	for (y375 = y376, y375_p_0 = 0;
+		y375 < y376 + 99;
+		y375 += 11, y375_p_0 += 11){
+		// y = ph_y, x = 112, h = 3, w = 3, c = 32, f = 32
+		// T (c, 1) (32 / 32)
+		for (c414 = c415, c414_p_0 = 0;
+			c414 < c415 + 32;
+			c414 += 32, c414_p_0 += 32){
+			// y = ph_y, x = 112, h = 3, w = 3, c = 32, f = 32
+			// T (y, 1) (ph_y / ph_y)
+			for (y = y375, yp_1 = y375_p_0, yp_0 = 0;
+				y < y375 + 11;
+				y += 11, yp_1 += 11, yp_0 += 11){
+				// y = ph_y, x = 112, h = 3, w = 3, c = 32, f = 32
+				// T (x, 112) (112 / 1)
+				for (x = x354, xp_0 = 0;
+					x < x354 + 112;
+					x += 1, xp_0 += 1){
+					// y = ph_y, x = 1, h = 3, w = 3, c = 32, f = 32
+					// T (h, 3) (3 / 1)
+					for (h = h226, hp_0 = 0;
+						h < h226 + 3;
+						h += 1, hp_0 += 1){
+						// y = ph_y, x = 1, h = 1, w = 3, c = 32, f = 32
+						// T (w, 3) (3 / 1)
+						for (w = w199, wp_0 = 0;
+							w < w199 + 3;
+							w += 1, wp_0 += 1){
+									mem_vec_3679 = _mm512_loadu_ps(&output[(F * Y) * x + F * y + f]);
+									mem_vec_3680 = _mm512_loadu_ps(&output[(F * Y) * x + F * y + f + 16]);
+									mem_vec_3681 = _mm512_loadu_ps(&output[(F * Y) * x + F * (y + 1) + f]);
+									mem_vec_3682 = _mm512_loadu_ps(&output[(F * Y) * x + F * (y + 1) + f + 16]);
+									mem_vec_3683 = _mm512_loadu_ps(&output[(F * Y) * x + F * (y + 2) + f]);
+									mem_vec_3684 = _mm512_loadu_ps(&output[(F * Y) * x + F * (y + 2) + f + 16]);
+									mem_vec_3685 = _mm512_loadu_ps(&output[(F * Y) * x + F * (y + 3) + f]);
+									mem_vec_3686 = _mm512_loadu_ps(&output[(F * Y) * x + F * (y + 3) + f + 16]);
+									mem_vec_3687 = _mm512_loadu_ps(&output[(F * Y) * x + F * (y + 4) + f]);
+									mem_vec_3688 = _mm512_loadu_ps(&output[(F * Y) * x + F * (y + 4) + f + 16]);
+									mem_vec_3689 = _mm512_loadu_ps(&output[(F * Y) * x + F * (y + 5) + f]);
+									mem_vec_3690 = _mm512_loadu_ps(&output[(F * Y) * x + F * (y + 5) + f + 16]);
+									mem_vec_3691 = _mm512_loadu_ps(&output[(F * Y) * x + F * (y + 6) + f]);
+									mem_vec_3692 = _mm512_loadu_ps(&output[(F * Y) * x + F * (y + 6) + f + 16]);
+									mem_vec_3693 = _mm512_loadu_ps(&output[(F * Y) * x + F * (y + 7) + f]);
+									mem_vec_3694 = _mm512_loadu_ps(&output[(F * Y) * x + F * (y + 7) + f + 16]);
+									mem_vec_3695 = _mm512_loadu_ps(&output[(F * Y) * x + F * (y + 8) + f]);
+									mem_vec_3696 = _mm512_loadu_ps(&output[(F * Y) * x + F * (y + 8) + f + 16]);
+									mem_vec_3697 = _mm512_loadu_ps(&output[(F * Y) * x + F * (y + 9) + f]);
+									mem_vec_3698 = _mm512_loadu_ps(&output[(F * Y) * x + F * (y + 9) + f + 16]);
+									mem_vec_3699 = _mm512_loadu_ps(&output[(F * Y) * x + F * (y + 10) + f]);
+									mem_vec_3700 = _mm512_loadu_ps(&output[(F * Y) * x + F * (y + 10) + f + 16]);
+									// y = ph_y, x = 1, h = 1, w = 1, c = 32, f = 32
+									// T (c, 32) (32 / 1)
+									for (c = c414, cp_1 = c414_p_0, cp_0 = 0;
+										c < c414 + 32;
+										c += 1, cp_1 += 1, cp_0 += 1){
+										scal_0 = input[(C * (Y + H - 1)) * (x + w) + C * (y + h) + c];
+										vec_1 = _mm512_set1_ps(scal_0);
+										vec_2 = _mm512_loadu_ps(&params[((F * C) * H) * w + (F * C) * h + F * c + f]);
 
-								vec_0 = _mm512_fmadd_ps(vec_1, vec_2, mem_vec_3043);
-								mem_vec_3043 = vec_0;
+										vec_0 = _mm512_fmadd_ps(vec_1, vec_2, mem_vec_3679);
+										mem_vec_3679 = vec_0;
 
-								vec_4 = _mm512_loadu_ps(&params[((F * C) * H) * w + (F * C) * h + F * c + f + 16]);
+										vec_4 = _mm512_loadu_ps(&params[((F * C) * H) * w + (F * C) * h + F * c + f + 16]);
 
-								vec_3 = _mm512_fmadd_ps(vec_1, vec_4, mem_vec_3044);
-								mem_vec_3044 = vec_3;
-								scal_1 = input[(C * (Y + H - 1)) * (x + w) + C * (y + 1 + h) + c];
-								vec_6 = _mm512_set1_ps(scal_1);
+										vec_3 = _mm512_fmadd_ps(vec_1, vec_4, mem_vec_3680);
+										mem_vec_3680 = vec_3;
+										scal_1 = input[(C * (Y + H - 1)) * (x + w) + C * (y + 1 + h) + c];
+										vec_6 = _mm512_set1_ps(scal_1);
 
 
-								vec_5 = _mm512_fmadd_ps(vec_6, vec_2, mem_vec_3045);
-								mem_vec_3045 = vec_5;
+										vec_5 = _mm512_fmadd_ps(vec_6, vec_2, mem_vec_3681);
+										mem_vec_3681 = vec_5;
 
 
 
-								vec_7 = _mm512_fmadd_ps(vec_6, vec_4, mem_vec_3046);
-								mem_vec_3046 = vec_7;
-								scal_2 = input[(C * (Y + H - 1)) * (x + w) + C * (y + 2 + h) + c];
-								vec_9 = _mm512_set1_ps(scal_2);
+										vec_7 = _mm512_fmadd_ps(vec_6, vec_4, mem_vec_3682);
+										mem_vec_3682 = vec_7;
+										scal_2 = input[(C * (Y + H - 1)) * (x + w) + C * (y + 2 + h) + c];
+										vec_9 = _mm512_set1_ps(scal_2);
 
 
-								vec_8 = _mm512_fmadd_ps(vec_9, vec_2, mem_vec_3047);
-								mem_vec_3047 = vec_8;
+										vec_8 = _mm512_fmadd_ps(vec_9, vec_2, mem_vec_3683);
+										mem_vec_3683 = vec_8;
 
 
 
-								vec_10 = _mm512_fmadd_ps(vec_9, vec_4, mem_vec_3048);
-								mem_vec_3048 = vec_10;
-								scal_3 = input[(C * (Y + H - 1)) * (x + w) + C * (y + 3 + h) + c];
-								vec_12 = _mm512_set1_ps(scal_3);
+										vec_10 = _mm512_fmadd_ps(vec_9, vec_4, mem_vec_3684);
+										mem_vec_3684 = vec_10;
+										scal_3 = input[(C * (Y + H - 1)) * (x + w) + C * (y + 3 + h) + c];
+										vec_12 = _mm512_set1_ps(scal_3);
 
 
-								vec_11 = _mm512_fmadd_ps(vec_12, vec_2, mem_vec_3049);
-								mem_vec_3049 = vec_11;
+										vec_11 = _mm512_fmadd_ps(vec_12, vec_2, mem_vec_3685);
+										mem_vec_3685 = vec_11;
 
 
 
-								vec_13 = _mm512_fmadd_ps(vec_12, vec_4, mem_vec_3050);
-								mem_vec_3050 = vec_13;
-								scal_4 = input[(C * (Y + H - 1)) * (x + w) + C * (y + 4 + h) + c];
-								vec_15 = _mm512_set1_ps(scal_4);
+										vec_13 = _mm512_fmadd_ps(vec_12, vec_4, mem_vec_3686);
+										mem_vec_3686 = vec_13;
+										scal_4 = input[(C * (Y + H - 1)) * (x + w) + C * (y + 4 + h) + c];
+										vec_15 = _mm512_set1_ps(scal_4);
 
 
-								vec_14 = _mm512_fmadd_ps(vec_15, vec_2, mem_vec_3051);
-								mem_vec_3051 = vec_14;
+										vec_14 = _mm512_fmadd_ps(vec_15, vec_2, mem_vec_3687);
+										mem_vec_3687 = vec_14;
 
 
 
-								vec_16 = _mm512_fmadd_ps(vec_15, vec_4, mem_vec_3052);
-								mem_vec_3052 = vec_16;
-								scal_5 = input[(C * (Y + H - 1)) * (x + w) + C * (y + 5 + h) + c];
-								vec_18 = _mm512_set1_ps(scal_5);
+										vec_16 = _mm512_fmadd_ps(vec_15, vec_4, mem_vec_3688);
+										mem_vec_3688 = vec_16;
+										scal_5 = input[(C * (Y + H - 1)) * (x + w) + C * (y + 5 + h) + c];
+										vec_18 = _mm512_set1_ps(scal_5);
 
 
-								vec_17 = _mm512_fmadd_ps(vec_18, vec_2, mem_vec_3053);
-								mem_vec_3053 = vec_17;
+										vec_17 = _mm512_fmadd_ps(vec_18, vec_2, mem_vec_3689);
+										mem_vec_3689 = vec_17;
 
 
 
-								vec_19 = _mm512_fmadd_ps(vec_18, vec_4, mem_vec_3054);
-								mem_vec_3054 = vec_19;
-								scal_6 = input[(C * (Y + H - 1)) * (x + w) + C * (y + 6 + h) + c];
-								vec_21 = _mm512_set1_ps(scal_6);
+										vec_19 = _mm512_fmadd_ps(vec_18, vec_4, mem_vec_3690);
+										mem_vec_3690 = vec_19;
+										scal_6 = input[(C * (Y + H - 1)) * (x + w) + C * (y + 6 + h) + c];
+										vec_21 = _mm512_set1_ps(scal_6);
 
 
-								vec_20 = _mm512_fmadd_ps(vec_21, vec_2, mem_vec_3055);
-								mem_vec_3055 = vec_20;
+										vec_20 = _mm512_fmadd_ps(vec_21, vec_2, mem_vec_3691);
+										mem_vec_3691 = vec_20;
 
 
 
-								vec_22 = _mm512_fmadd_ps(vec_21, vec_4, mem_vec_3056);
-								mem_vec_3056 = vec_22;
-								scal_7 = input[(C * (Y + H - 1)) * (x + w + 1) + C * (y + h) + c];
-								vec_24 = _mm512_set1_ps(scal_7);
-								vec_25 = _mm512_loadu_ps(&params[((F * C) * H) * (w + 1) + (F * C) * h + F * c + f]);
+										vec_22 = _mm512_fmadd_ps(vec_21, vec_4, mem_vec_3692);
+										mem_vec_3692 = vec_22;
+										scal_7 = input[(C * (Y + H - 1)) * (x + w) + C * (y + 7 + h) + c];
+										vec_24 = _mm512_set1_ps(scal_7);
 
-								vec_23 = _mm512_fmadd_ps(vec_24, vec_25, mem_vec_3043);
-								mem_vec_3043 = vec_23;
 
-								vec_27 = _mm512_loadu_ps(&params[((F * C) * H) * (w + 1) + (F * C) * h + F * c + f + 16]);
+										vec_23 = _mm512_fmadd_ps(vec_24, vec_2, mem_vec_3693);
+										mem_vec_3693 = vec_23;
 
-								vec_26 = _mm512_fmadd_ps(vec_24, vec_27, mem_vec_3044);
-								mem_vec_3044 = vec_26;
-								scal_8 = input[(C * (Y + H - 1)) * (x + w + 1) + C * (y + 1 + h) + c];
-								vec_29 = _mm512_set1_ps(scal_8);
 
 
-								vec_28 = _mm512_fmadd_ps(vec_29, vec_25, mem_vec_3045);
-								mem_vec_3045 = vec_28;
+										vec_25 = _mm512_fmadd_ps(vec_24, vec_4, mem_vec_3694);
+										mem_vec_3694 = vec_25;
+										scal_8 = input[(C * (Y + H - 1)) * (x + w) + C * (y + 8 + h) + c];
+										vec_27 = _mm512_set1_ps(scal_8);
 
 
+										vec_26 = _mm512_fmadd_ps(vec_27, vec_2, mem_vec_3695);
+										mem_vec_3695 = vec_26;
 
-								vec_30 = _mm512_fmadd_ps(vec_29, vec_27, mem_vec_3046);
-								mem_vec_3046 = vec_30;
-								scal_9 = input[(C * (Y + H - 1)) * (x + w + 1) + C * (y + 2 + h) + c];
-								vec_32 = _mm512_set1_ps(scal_9);
 
 
-								vec_31 = _mm512_fmadd_ps(vec_32, vec_25, mem_vec_3047);
-								mem_vec_3047 = vec_31;
+										vec_28 = _mm512_fmadd_ps(vec_27, vec_4, mem_vec_3696);
+										mem_vec_3696 = vec_28;
+										scal_9 = input[(C * (Y + H - 1)) * (x + w) + C * (y + 9 + h) + c];
+										vec_30 = _mm512_set1_ps(scal_9);
 
 
+										vec_29 = _mm512_fmadd_ps(vec_30, vec_2, mem_vec_3697);
+										mem_vec_3697 = vec_29;
 
-								vec_33 = _mm512_fmadd_ps(vec_32, vec_27, mem_vec_3048);
-								mem_vec_3048 = vec_33;
-								scal_10 = input[(C * (Y + H - 1)) * (x + w + 1) + C * (y + 3 + h) + c];
-								vec_35 = _mm512_set1_ps(scal_10);
 
 
-								vec_34 = _mm512_fmadd_ps(vec_35, vec_25, mem_vec_3049);
-								mem_vec_3049 = vec_34;
+										vec_31 = _mm512_fmadd_ps(vec_30, vec_4, mem_vec_3698);
+										mem_vec_3698 = vec_31;
+										scal_10 = input[(C * (Y + H - 1)) * (x + w) + C * (y + 10 + h) + c];
+										vec_33 = _mm512_set1_ps(scal_10);
 
 
+										vec_32 = _mm512_fmadd_ps(vec_33, vec_2, mem_vec_3699);
+										mem_vec_3699 = vec_32;
 
-								vec_36 = _mm512_fmadd_ps(vec_35, vec_27, mem_vec_3050);
-								mem_vec_3050 = vec_36;
-								scal_11 = input[(C * (Y + H - 1)) * (x + w + 1) + C * (y + 4 + h) + c];
-								vec_38 = _mm512_set1_ps(scal_11);
 
 
-								vec_37 = _mm512_fmadd_ps(vec_38, vec_25, mem_vec_3051);
-								mem_vec_3051 = vec_37;
-
-
-
-								vec_39 = _mm512_fmadd_ps(vec_38, vec_27, mem_vec_3052);
-								mem_vec_3052 = vec_39;
-								scal_12 = input[(C * (Y + H - 1)) * (x + w + 1) + C * (y + 5 + h) + c];
-								vec_41 = _mm512_set1_ps(scal_12);
-
-
-								vec_40 = _mm512_fmadd_ps(vec_41, vec_25, mem_vec_3053);
-								mem_vec_3053 = vec_40;
-
-
-
-								vec_42 = _mm512_fmadd_ps(vec_41, vec_27, mem_vec_3054);
-								mem_vec_3054 = vec_42;
-								scal_13 = input[(C * (Y + H - 1)) * (x + w + 1) + C * (y + 6 + h) + c];
-								vec_44 = _mm512_set1_ps(scal_13);
-
-
-								vec_43 = _mm512_fmadd_ps(vec_44, vec_25, mem_vec_3055);
-								mem_vec_3055 = vec_43;
-
-
-
-								vec_45 = _mm512_fmadd_ps(vec_44, vec_27, mem_vec_3056);
-								mem_vec_3056 = vec_45;
-								scal_14 = input[(C * (Y + H - 1)) * (x + w + 2) + C * (y + h) + c];
-								vec_47 = _mm512_set1_ps(scal_14);
-								vec_48 = _mm512_loadu_ps(&params[((F * C) * H) * (w + 2) + (F * C) * h + F * c + f]);
-
-								vec_46 = _mm512_fmadd_ps(vec_47, vec_48, mem_vec_3043);
-								mem_vec_3043 = vec_46;
-
-								vec_50 = _mm512_loadu_ps(&params[((F * C) * H) * (w + 2) + (F * C) * h + F * c + f + 16]);
-
-								vec_49 = _mm512_fmadd_ps(vec_47, vec_50, mem_vec_3044);
-								mem_vec_3044 = vec_49;
-								scal_15 = input[(C * (Y + H - 1)) * (x + w + 2) + C * (y + 1 + h) + c];
-								vec_52 = _mm512_set1_ps(scal_15);
-
-
-								vec_51 = _mm512_fmadd_ps(vec_52, vec_48, mem_vec_3045);
-								mem_vec_3045 = vec_51;
-
-
-
-								vec_53 = _mm512_fmadd_ps(vec_52, vec_50, mem_vec_3046);
-								mem_vec_3046 = vec_53;
-								scal_16 = input[(C * (Y + H - 1)) * (x + w + 2) + C * (y + 2 + h) + c];
-								vec_55 = _mm512_set1_ps(scal_16);
-
-
-								vec_54 = _mm512_fmadd_ps(vec_55, vec_48, mem_vec_3047);
-								mem_vec_3047 = vec_54;
-
-
-
-								vec_56 = _mm512_fmadd_ps(vec_55, vec_50, mem_vec_3048);
-								mem_vec_3048 = vec_56;
-								scal_17 = input[(C * (Y + H - 1)) * (x + w + 2) + C * (y + 3 + h) + c];
-								vec_58 = _mm512_set1_ps(scal_17);
-
-
-								vec_57 = _mm512_fmadd_ps(vec_58, vec_48, mem_vec_3049);
-								mem_vec_3049 = vec_57;
-
-
-
-								vec_59 = _mm512_fmadd_ps(vec_58, vec_50, mem_vec_3050);
-								mem_vec_3050 = vec_59;
-								scal_18 = input[(C * (Y + H - 1)) * (x + w + 2) + C * (y + 4 + h) + c];
-								vec_61 = _mm512_set1_ps(scal_18);
-
-
-								vec_60 = _mm512_fmadd_ps(vec_61, vec_48, mem_vec_3051);
-								mem_vec_3051 = vec_60;
-
-
-
-								vec_62 = _mm512_fmadd_ps(vec_61, vec_50, mem_vec_3052);
-								mem_vec_3052 = vec_62;
-								scal_19 = input[(C * (Y + H - 1)) * (x + w + 2) + C * (y + 5 + h) + c];
-								vec_64 = _mm512_set1_ps(scal_19);
-
-
-								vec_63 = _mm512_fmadd_ps(vec_64, vec_48, mem_vec_3053);
-								mem_vec_3053 = vec_63;
-
-
-
-								vec_65 = _mm512_fmadd_ps(vec_64, vec_50, mem_vec_3054);
-								mem_vec_3054 = vec_65;
-								scal_20 = input[(C * (Y + H - 1)) * (x + w + 2) + C * (y + 6 + h) + c];
-								vec_67 = _mm512_set1_ps(scal_20);
-
-
-								vec_66 = _mm512_fmadd_ps(vec_67, vec_48, mem_vec_3055);
-								mem_vec_3055 = vec_66;
-
-
-
-								vec_68 = _mm512_fmadd_ps(vec_67, vec_50, mem_vec_3056);
-								mem_vec_3056 = vec_68;
-							}
-						_mm512_storeu_ps(&output[(F * Y) * x + F * y + f], mem_vec_3043);
-						_mm512_storeu_ps(&output[(F * Y) * x + F * y + f + 16], mem_vec_3044);
-						_mm512_storeu_ps(&output[(F * Y) * x + F * (y + 1) + f], mem_vec_3045);
-						_mm512_storeu_ps(&output[(F * Y) * x + F * (y + 1) + f + 16], mem_vec_3046);
-						_mm512_storeu_ps(&output[(F * Y) * x + F * (y + 2) + f], mem_vec_3047);
-						_mm512_storeu_ps(&output[(F * Y) * x + F * (y + 2) + f + 16], mem_vec_3048);
-						_mm512_storeu_ps(&output[(F * Y) * x + F * (y + 3) + f], mem_vec_3049);
-						_mm512_storeu_ps(&output[(F * Y) * x + F * (y + 3) + f + 16], mem_vec_3050);
-						_mm512_storeu_ps(&output[(F * Y) * x + F * (y + 4) + f], mem_vec_3051);
-						_mm512_storeu_ps(&output[(F * Y) * x + F * (y + 4) + f + 16], mem_vec_3052);
-						_mm512_storeu_ps(&output[(F * Y) * x + F * (y + 5) + f], mem_vec_3053);
-						_mm512_storeu_ps(&output[(F * Y) * x + F * (y + 5) + f + 16], mem_vec_3054);
-						_mm512_storeu_ps(&output[(F * Y) * x + F * (y + 6) + f], mem_vec_3055);
-						_mm512_storeu_ps(&output[(F * Y) * x + F * (y + 6) + f + 16], mem_vec_3056);
+										vec_34 = _mm512_fmadd_ps(vec_33, vec_4, mem_vec_3700);
+										mem_vec_3700 = vec_34;
+									}
+								_mm512_storeu_ps(&output[(F * Y) * x + F * y + f], mem_vec_3679);
+								_mm512_storeu_ps(&output[(F * Y) * x + F * y + f + 16], mem_vec_3680);
+								_mm512_storeu_ps(&output[(F * Y) * x + F * (y + 1) + f], mem_vec_3681);
+								_mm512_storeu_ps(&output[(F * Y) * x + F * (y + 1) + f + 16], mem_vec_3682);
+								_mm512_storeu_ps(&output[(F * Y) * x + F * (y + 2) + f], mem_vec_3683);
+								_mm512_storeu_ps(&output[(F * Y) * x + F * (y + 2) + f + 16], mem_vec_3684);
+								_mm512_storeu_ps(&output[(F * Y) * x + F * (y + 3) + f], mem_vec_3685);
+								_mm512_storeu_ps(&output[(F * Y) * x + F * (y + 3) + f + 16], mem_vec_3686);
+								_mm512_storeu_ps(&output[(F * Y) * x + F * (y + 4) + f], mem_vec_3687);
+								_mm512_storeu_ps(&output[(F * Y) * x + F * (y + 4) + f + 16], mem_vec_3688);
+								_mm512_storeu_ps(&output[(F * Y) * x + F * (y + 5) + f], mem_vec_3689);
+								_mm512_storeu_ps(&output[(F * Y) * x + F * (y + 5) + f + 16], mem_vec_3690);
+								_mm512_storeu_ps(&output[(F * Y) * x + F * (y + 6) + f], mem_vec_3691);
+								_mm512_storeu_ps(&output[(F * Y) * x + F * (y + 6) + f + 16], mem_vec_3692);
+								_mm512_storeu_ps(&output[(F * Y) * x + F * (y + 7) + f], mem_vec_3693);
+								_mm512_storeu_ps(&output[(F * Y) * x + F * (y + 7) + f + 16], mem_vec_3694);
+								_mm512_storeu_ps(&output[(F * Y) * x + F * (y + 8) + f], mem_vec_3695);
+								_mm512_storeu_ps(&output[(F * Y) * x + F * (y + 8) + f + 16], mem_vec_3696);
+								_mm512_storeu_ps(&output[(F * Y) * x + F * (y + 9) + f], mem_vec_3697);
+								_mm512_storeu_ps(&output[(F * Y) * x + F * (y + 9) + f + 16], mem_vec_3698);
+								_mm512_storeu_ps(&output[(F * Y) * x + F * (y + 10) + f], mem_vec_3699);
+								_mm512_storeu_ps(&output[(F * Y) * x + F * (y + 10) + f + 16], mem_vec_3700);
+						}
+					}
 				}
 			}
 		}
 	}
-}
+	for (y375 = y376 + 99, y375_p_0 = 0;
+		y375 < y376 + 99 + 13;
+		y375 += 13, y375_p_0 += 13){
+		// y = ph_y, x = 112, h = 3, w = 3, c = 32, f = 32
+		// T (c, 1) (32 / 32)
+		for (c414 = c415, c414_p_0 = 0;
+			c414 < c415 + 32;
+			c414 += 32, c414_p_0 += 32){
+			// y = ph_y, x = 112, h = 3, w = 3, c = 32, f = 32
+			// T (y, 1) (ph_y / ph_y)
+			for (y = y375, yp_1 = y375_p_0, yp_0 = 0;
+				y < y375 + 13;
+				y += 13, yp_1 += 13, yp_0 += 13){
+				// y = ph_y, x = 112, h = 3, w = 3, c = 32, f = 32
+				// T (x, 112) (112 / 1)
+				for (x = x354, xp_0 = 0;
+					x < x354 + 112;
+					x += 1, xp_0 += 1){
+					// y = ph_y, x = 1, h = 3, w = 3, c = 32, f = 32
+					// T (h, 3) (3 / 1)
+					for (h = h226, hp_0 = 0;
+						h < h226 + 3;
+						h += 1, hp_0 += 1){
+						// y = ph_y, x = 1, h = 1, w = 3, c = 32, f = 32
+						// T (w, 3) (3 / 1)
+						for (w = w199, wp_0 = 0;
+							w < w199 + 3;
+							w += 1, wp_0 += 1){
+									mem_vec_3701 = _mm512_loadu_ps(&output[(F * Y) * x + F * y + f]);
+									mem_vec_3702 = _mm512_loadu_ps(&output[(F * Y) * x + F * y + f + 16]);
+									mem_vec_3703 = _mm512_loadu_ps(&output[(F * Y) * x + F * (y + 1) + f]);
+									mem_vec_3704 = _mm512_loadu_ps(&output[(F * Y) * x + F * (y + 1) + f + 16]);
+									mem_vec_3705 = _mm512_loadu_ps(&output[(F * Y) * x + F * (y + 2) + f]);
+									mem_vec_3706 = _mm512_loadu_ps(&output[(F * Y) * x + F * (y + 2) + f + 16]);
+									mem_vec_3707 = _mm512_loadu_ps(&output[(F * Y) * x + F * (y + 3) + f]);
+									mem_vec_3708 = _mm512_loadu_ps(&output[(F * Y) * x + F * (y + 3) + f + 16]);
+									mem_vec_3709 = _mm512_loadu_ps(&output[(F * Y) * x + F * (y + 4) + f]);
+									mem_vec_3710 = _mm512_loadu_ps(&output[(F * Y) * x + F * (y + 4) + f + 16]);
+									mem_vec_3711 = _mm512_loadu_ps(&output[(F * Y) * x + F * (y + 5) + f]);
+									mem_vec_3712 = _mm512_loadu_ps(&output[(F * Y) * x + F * (y + 5) + f + 16]);
+									mem_vec_3713 = _mm512_loadu_ps(&output[(F * Y) * x + F * (y + 6) + f]);
+									mem_vec_3714 = _mm512_loadu_ps(&output[(F * Y) * x + F * (y + 6) + f + 16]);
+									mem_vec_3715 = _mm512_loadu_ps(&output[(F * Y) * x + F * (y + 7) + f]);
+									mem_vec_3716 = _mm512_loadu_ps(&output[(F * Y) * x + F * (y + 7) + f + 16]);
+									mem_vec_3717 = _mm512_loadu_ps(&output[(F * Y) * x + F * (y + 8) + f]);
+									mem_vec_3718 = _mm512_loadu_ps(&output[(F * Y) * x + F * (y + 8) + f + 16]);
+									mem_vec_3719 = _mm512_loadu_ps(&output[(F * Y) * x + F * (y + 9) + f]);
+									mem_vec_3720 = _mm512_loadu_ps(&output[(F * Y) * x + F * (y + 9) + f + 16]);
+									mem_vec_3721 = _mm512_loadu_ps(&output[(F * Y) * x + F * (y + 10) + f]);
+									mem_vec_3722 = _mm512_loadu_ps(&output[(F * Y) * x + F * (y + 10) + f + 16]);
+									mem_vec_3723 = _mm512_loadu_ps(&output[(F * Y) * x + F * (y + 11) + f]);
+									mem_vec_3724 = _mm512_loadu_ps(&output[(F * Y) * x + F * (y + 11) + f + 16]);
+									mem_vec_3725 = _mm512_loadu_ps(&output[(F * Y) * x + F * (y + 12) + f]);
+									mem_vec_3726 = _mm512_loadu_ps(&output[(F * Y) * x + F * (y + 12) + f + 16]);
+									// y = ph_y, x = 1, h = 1, w = 1, c = 32, f = 32
+									// T (c, 32) (32 / 1)
+									for (c = c414, cp_1 = c414_p_0, cp_0 = 0;
+										c < c414 + 32;
+										c += 1, cp_1 += 1, cp_0 += 1){
+										scal_0 = input[(C * (Y + H - 1)) * (x + w) + C * (y + h) + c];
+										vec_1 = _mm512_set1_ps(scal_0);
+										vec_2 = _mm512_loadu_ps(&params[((F * C) * H) * w + (F * C) * h + F * c + f]);
+
+										vec_0 = _mm512_fmadd_ps(vec_1, vec_2, mem_vec_3701);
+										mem_vec_3701 = vec_0;
+
+										vec_4 = _mm512_loadu_ps(&params[((F * C) * H) * w + (F * C) * h + F * c + f + 16]);
+
+										vec_3 = _mm512_fmadd_ps(vec_1, vec_4, mem_vec_3702);
+										mem_vec_3702 = vec_3;
+										scal_1 = input[(C * (Y + H - 1)) * (x + w) + C * (y + 1 + h) + c];
+										vec_6 = _mm512_set1_ps(scal_1);
+
+
+										vec_5 = _mm512_fmadd_ps(vec_6, vec_2, mem_vec_3703);
+										mem_vec_3703 = vec_5;
+
+
+
+										vec_7 = _mm512_fmadd_ps(vec_6, vec_4, mem_vec_3704);
+										mem_vec_3704 = vec_7;
+										scal_2 = input[(C * (Y + H - 1)) * (x + w) + C * (y + 2 + h) + c];
+										vec_9 = _mm512_set1_ps(scal_2);
+
+
+										vec_8 = _mm512_fmadd_ps(vec_9, vec_2, mem_vec_3705);
+										mem_vec_3705 = vec_8;
+
+
+
+										vec_10 = _mm512_fmadd_ps(vec_9, vec_4, mem_vec_3706);
+										mem_vec_3706 = vec_10;
+										scal_3 = input[(C * (Y + H - 1)) * (x + w) + C * (y + 3 + h) + c];
+										vec_12 = _mm512_set1_ps(scal_3);
+
+
+										vec_11 = _mm512_fmadd_ps(vec_12, vec_2, mem_vec_3707);
+										mem_vec_3707 = vec_11;
+
+
+
+										vec_13 = _mm512_fmadd_ps(vec_12, vec_4, mem_vec_3708);
+										mem_vec_3708 = vec_13;
+										scal_4 = input[(C * (Y + H - 1)) * (x + w) + C * (y + 4 + h) + c];
+										vec_15 = _mm512_set1_ps(scal_4);
+
+
+										vec_14 = _mm512_fmadd_ps(vec_15, vec_2, mem_vec_3709);
+										mem_vec_3709 = vec_14;
+
+
+
+										vec_16 = _mm512_fmadd_ps(vec_15, vec_4, mem_vec_3710);
+										mem_vec_3710 = vec_16;
+										scal_5 = input[(C * (Y + H - 1)) * (x + w) + C * (y + 5 + h) + c];
+										vec_18 = _mm512_set1_ps(scal_5);
+
+
+										vec_17 = _mm512_fmadd_ps(vec_18, vec_2, mem_vec_3711);
+										mem_vec_3711 = vec_17;
+
+
+
+										vec_19 = _mm512_fmadd_ps(vec_18, vec_4, mem_vec_3712);
+										mem_vec_3712 = vec_19;
+										scal_6 = input[(C * (Y + H - 1)) * (x + w) + C * (y + 6 + h) + c];
+										vec_21 = _mm512_set1_ps(scal_6);
+
+
+										vec_20 = _mm512_fmadd_ps(vec_21, vec_2, mem_vec_3713);
+										mem_vec_3713 = vec_20;
+
+
+
+										vec_22 = _mm512_fmadd_ps(vec_21, vec_4, mem_vec_3714);
+										mem_vec_3714 = vec_22;
+										scal_7 = input[(C * (Y + H - 1)) * (x + w) + C * (y + 7 + h) + c];
+										vec_24 = _mm512_set1_ps(scal_7);
+
+
+										vec_23 = _mm512_fmadd_ps(vec_24, vec_2, mem_vec_3715);
+										mem_vec_3715 = vec_23;
+
+
+
+										vec_25 = _mm512_fmadd_ps(vec_24, vec_4, mem_vec_3716);
+										mem_vec_3716 = vec_25;
+										scal_8 = input[(C * (Y + H - 1)) * (x + w) + C * (y + 8 + h) + c];
+										vec_27 = _mm512_set1_ps(scal_8);
+
+
+										vec_26 = _mm512_fmadd_ps(vec_27, vec_2, mem_vec_3717);
+										mem_vec_3717 = vec_26;
+
+
+
+										vec_28 = _mm512_fmadd_ps(vec_27, vec_4, mem_vec_3718);
+										mem_vec_3718 = vec_28;
+										scal_9 = input[(C * (Y + H - 1)) * (x + w) + C * (y + 9 + h) + c];
+										vec_30 = _mm512_set1_ps(scal_9);
+
+
+										vec_29 = _mm512_fmadd_ps(vec_30, vec_2, mem_vec_3719);
+										mem_vec_3719 = vec_29;
+
+
+
+										vec_31 = _mm512_fmadd_ps(vec_30, vec_4, mem_vec_3720);
+										mem_vec_3720 = vec_31;
+										scal_10 = input[(C * (Y + H - 1)) * (x + w) + C * (y + 10 + h) + c];
+										vec_33 = _mm512_set1_ps(scal_10);
+
+
+										vec_32 = _mm512_fmadd_ps(vec_33, vec_2, mem_vec_3721);
+										mem_vec_3721 = vec_32;
+
+
+
+										vec_34 = _mm512_fmadd_ps(vec_33, vec_4, mem_vec_3722);
+										mem_vec_3722 = vec_34;
+										scal_11 = input[(C * (Y + H - 1)) * (x + w) + C * (y + 11 + h) + c];
+										vec_36 = _mm512_set1_ps(scal_11);
+
+
+										vec_35 = _mm512_fmadd_ps(vec_36, vec_2, mem_vec_3723);
+										mem_vec_3723 = vec_35;
+
+
+
+										vec_37 = _mm512_fmadd_ps(vec_36, vec_4, mem_vec_3724);
+										mem_vec_3724 = vec_37;
+										scal_12 = input[(C * (Y + H - 1)) * (x + w) + C * (y + 12 + h) + c];
+										vec_39 = _mm512_set1_ps(scal_12);
+
+
+										vec_38 = _mm512_fmadd_ps(vec_39, vec_2, mem_vec_3725);
+										mem_vec_3725 = vec_38;
+
+
+
+										vec_40 = _mm512_fmadd_ps(vec_39, vec_4, mem_vec_3726);
+										mem_vec_3726 = vec_40;
+									}
+								_mm512_storeu_ps(&output[(F * Y) * x + F * y + f], mem_vec_3701);
+								_mm512_storeu_ps(&output[(F * Y) * x + F * y + f + 16], mem_vec_3702);
+								_mm512_storeu_ps(&output[(F * Y) * x + F * (y + 1) + f], mem_vec_3703);
+								_mm512_storeu_ps(&output[(F * Y) * x + F * (y + 1) + f + 16], mem_vec_3704);
+								_mm512_storeu_ps(&output[(F * Y) * x + F * (y + 2) + f], mem_vec_3705);
+								_mm512_storeu_ps(&output[(F * Y) * x + F * (y + 2) + f + 16], mem_vec_3706);
+								_mm512_storeu_ps(&output[(F * Y) * x + F * (y + 3) + f], mem_vec_3707);
+								_mm512_storeu_ps(&output[(F * Y) * x + F * (y + 3) + f + 16], mem_vec_3708);
+								_mm512_storeu_ps(&output[(F * Y) * x + F * (y + 4) + f], mem_vec_3709);
+								_mm512_storeu_ps(&output[(F * Y) * x + F * (y + 4) + f + 16], mem_vec_3710);
+								_mm512_storeu_ps(&output[(F * Y) * x + F * (y + 5) + f], mem_vec_3711);
+								_mm512_storeu_ps(&output[(F * Y) * x + F * (y + 5) + f + 16], mem_vec_3712);
+								_mm512_storeu_ps(&output[(F * Y) * x + F * (y + 6) + f], mem_vec_3713);
+								_mm512_storeu_ps(&output[(F * Y) * x + F * (y + 6) + f + 16], mem_vec_3714);
+								_mm512_storeu_ps(&output[(F * Y) * x + F * (y + 7) + f], mem_vec_3715);
+								_mm512_storeu_ps(&output[(F * Y) * x + F * (y + 7) + f + 16], mem_vec_3716);
+								_mm512_storeu_ps(&output[(F * Y) * x + F * (y + 8) + f], mem_vec_3717);
+								_mm512_storeu_ps(&output[(F * Y) * x + F * (y + 8) + f + 16], mem_vec_3718);
+								_mm512_storeu_ps(&output[(F * Y) * x + F * (y + 9) + f], mem_vec_3719);
+								_mm512_storeu_ps(&output[(F * Y) * x + F * (y + 9) + f + 16], mem_vec_3720);
+								_mm512_storeu_ps(&output[(F * Y) * x + F * (y + 10) + f], mem_vec_3721);
+								_mm512_storeu_ps(&output[(F * Y) * x + F * (y + 10) + f + 16], mem_vec_3722);
+								_mm512_storeu_ps(&output[(F * Y) * x + F * (y + 11) + f], mem_vec_3723);
+								_mm512_storeu_ps(&output[(F * Y) * x + F * (y + 11) + f + 16], mem_vec_3724);
+								_mm512_storeu_ps(&output[(F * Y) * x + F * (y + 12) + f], mem_vec_3725);
+								_mm512_storeu_ps(&output[(F * Y) * x + F * (y + 12) + f + 16], mem_vec_3726);
+						}
+					}
+				}
+			}
+		}
+	}
 
 
 }
