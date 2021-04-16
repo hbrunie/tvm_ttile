@@ -1,1 +1,4 @@
-IdRun;NameConv;Time(ms);std;NbMicroKernel;AxeFuse;SizeAxeFuse;Schema;Time_search(1.9396259784698486)
+IdRun;NameConv;Time(ms);std;NbMicroKernel;AxeFuse;SizeAxeFuse;Schema;Time_search(0.005351543426513672)
+0;Yolo9000_23;8.0782828;0.008013804462301407;1;axe_out_channels_0;589;[V f, U (3, f), ULambda y, T (16, c), Hoist_vars [c], T (17, x), T (64, c),  Lambda_apply y [((Iter 1), (Arg 5)), ((Iter 2), (Arg 6))], T (1, f),  T (1, y), T (1, c), T (589, f)];2.08233642578125
+1;Yolo9000_23;7.613449900000001;0.004311674487945394;1;axe_out_channels_0;589;[V f, U (3, f), ULambda y, T (32, c), Hoist_vars [c], T (17, x), T (2, c),  Lambda_apply y [((Iter 1), (Arg 8)), ((Iter 1), (Arg 9))], T (1, f),  T (1, y), T (16, c), T (589, f)];4.226872444152832
+2;Yolo9000_23;186.84361839999997;0.03630719971630802;1;axe_out_channels_0;1;[V f, U (3, f), ULambda y, T (512, c), Hoist_vars [c], T (17, x), T (2, c),  Lambda_apply y [((Iter 2), (Arg 5)), ((Iter 1), (Arg 7))], T (589, f),  T (1, y), T (1, c), T (1, f)];13.6440269947052
