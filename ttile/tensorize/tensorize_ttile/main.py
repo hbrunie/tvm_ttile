@@ -513,20 +513,27 @@ if __name__ == '__main__':
 
             # evaluate
 
+            # evaluate
+
             dtype = "float32"
             aa = np.random.uniform(size=(batch_size, width + kernel_w - 1, height + kernel_h - 1, in_channels))
             ww = np.random.uniform(size=(kernel_w, kernel_h, in_channels, out_channels))
             oo = np.zeros((batch_size, width // stride_h, height // stride_h, out_channels), dtype=dtype)
-            
-            a = tvm.nd.array(aa.copy().astype(A.dtype), ctx)
-            w = tvm.nd.array(ww.copy().astype(W.dtype), ctx)
-            o = tvm.nd.array(oo.copy(), ctx)
+
+            la = []
+            lw = []
+            lo = []
+
+            for k in range(20):
+                la += [tvm.nd.array(aa.copy().astype(A.dtype), ctx)]
+                lw += [tvm.nd.array(ww.copy().astype(W.dtype), ctx)]
+                lo += [tvm.nd.array(oo.copy(), ctx)]
 
             # evaluate
             results = []
             for k in range(20):
                 evaluator = func.time_evaluator(func.entry_name, ctx, number=1, repeat=1)
-                results += [(evaluator(a, w, o).mean * 1e3)]
+                results += [(evaluator(la[k], lw[k], lo[k]).mean * 1e3)]
 
             for k in range(5):
                 results.remove(max(results))
