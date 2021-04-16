@@ -219,7 +219,7 @@ def factor(variable, order, structure, level_max, split = False):
     for k in order:
         if convert[variable] in k:
             v += 1
-    # print(variable, f, v)
+    #print(variable, f, v)
     if len(f) != 0:
         if len(f) >= v and f[-1] == 1:
             del f[-1]
@@ -264,10 +264,15 @@ def find_size_tensorize(variable, lorder, level, factors, height_y):
         else:
             return size[letter]
     else:
+        #print(factors, variable, id_)
         if len(factors) == 0:
             return 1
         else:
-            return factors[id_ - 1]
+            try:
+                r = factors[id_ - 1]
+            except:
+                r = 1
+            return r
 
 def find_loop_to_delete(structure, id_):
     """

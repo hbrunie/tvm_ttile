@@ -11,7 +11,7 @@ import os
 import random
 import time
 
-HOME = "/root"
+HOME = "/home/stephane"
 # HOME = "/home/colo"
 
 def generate_ttile_conv2d(name_file, number_of_file):
@@ -443,6 +443,8 @@ if __name__ == '__main__':
 
     for runs in range(len(cfiles)):
 
+        print(name_conv, runs/len(cfiles))
+
         try:
         #if True:
 
@@ -463,7 +465,7 @@ if __name__ == '__main__':
             dtype = "float32"
 
             info_tile = parser.parser(name_conv, stride_h)
-            print(info_tile)
+            #print(info_tile)
 
             if len(info_tile) == 1:
                 s, I = conv2d_ttile_1kernel(name_conv, batch_size, width, height, kernel_w, kernel_h, in_channels, out_channels, info_tile, stride_w, stride_h)
@@ -557,4 +559,4 @@ if __name__ == '__main__':
                 os.system("mv tensorize_files/" + name_conv + "2.c old_c_files/" + name_conv + "2_tensorize__" + str(runs) + ".c" )
         #else:
         except:
-            pass
+            print("ICI", name_conv, runs)
