@@ -57,7 +57,7 @@ set(USE_CUDA OFF)
 set(USE_ROCM OFF)
 
 # TTILE 
-set(USE_TTILE ON)
+set(USE_TTILE OFF)
 
 # Whether enable SDAccel runtime
 set(USE_SDACCEL OFF)
