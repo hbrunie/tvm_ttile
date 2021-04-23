@@ -15,6 +15,8 @@ git clone --recursive git@github.com:S12P/tvm_ttile.git
 
 pip3 install numpy decorator attrs tornado psutil xgboost cloudpickle pytest
 
+apt install libpapi-dev papi-tools
+sysctl -w kernel.perf_event_paranoid=0
 git clone git@gitlab.inria.fr:ntollena/matmul_bench.git
 (cd matmul_bench && git checkout stephane_metric)
 
