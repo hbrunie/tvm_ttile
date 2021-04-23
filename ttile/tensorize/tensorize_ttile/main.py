@@ -11,11 +11,15 @@ import os
 import random
 import time
 
-HOME = "/home/stephane"
+HOME = "/root"
 # HOME = "/home/colo"
 
-def generate_ttile_conv2d(name_file, number_of_file):
+name_cpu = "XeonGold6130"
 
+NUM_THREAD=8
+os.environ["TVM_NUM_THREADS"] = str(NUM_THREAD)
+
+def generate_ttile_conv2d(name_file, number_of_file):
     cc_code_begin = """
 extern "C" {
     """
@@ -437,7 +441,7 @@ if __name__ == '__main__':
 
     search_time = time.time() - begin_time
 
-    file_result = open("results/result_" + name_conv + ".csv", "w")
+    file_result = open("results/result_" + str(NUM_THREAD) + "_" + archi + "_" + name_cpu + "_" + name_conv + ".csv", "w")
     file_result.write("IdRun;NameConv;Time(ms);std;NbMicroKernel;AxeFuse;SizeAxeFuse;Schema;Time_search(" + str(search_time) + ")\n")
     file_result.close()
 
@@ -549,7 +553,7 @@ if __name__ == '__main__':
 
             search_time = time.time() - begin_time
 
-            file_result = open("results/result_" + name_conv + ".csv", "a")
+            file_result = open("results/result_" + str(NUM_THREAD) + "_" + archi + "_" + name_cpu + "_" + name_conv + ".csv", "a")
             file_result.write(str(runs) + ";" + name_conv + ";" + str(result) + ";" + str(std) + ";" + str(len(info_tile)) + ";" + axe_fuse + ";" + str(size_axe_fuse) + ";" + schema + ";" + str(search_time) + "\n")
             file_result.close()
 
