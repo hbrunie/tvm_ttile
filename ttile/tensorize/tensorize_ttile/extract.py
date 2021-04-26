@@ -42,7 +42,7 @@ except:
 
 file_ = open("result_all.csv", "w")
 
-file_.write("NAME_CONV;NUM_THREADS;TimeTVM+TTILE(ms);%PeakPerfTVM+TTILE;TimeAUTOTVM;%PeakPerfAUTOTVM;NbMicroKernel;AxeFuse;SizeAxeFuse;Schema\n")
+file_.write("NAME_CONV,NUM_THREADS,TimeTVM+TTILE(ms),%PeakPerfTVM+TTILE,TimeAUTOTVM,%PeakPerfAUTOTVM,NbMicroKernel,AxeFuse,SizeAxeFuse,Schema\n")
 
 for sub in range(len(subfolder)):
     lconv = os.listdir(name_folder + "/" + subfolder[sub] + "/results")
@@ -79,7 +79,7 @@ for sub in range(len(subfolder)):
             except:
                 time_autotvm = ""
                 peak_perf_autotvm = ""
-            file_.write(bestline[1] + ";" + subfolder[sub] + ";" + bestline[2] + ";" + str(peak_perf/float(bestline[2]) * 100)  + ";" + time_autotvm + ";" + peak_perf_autotvm + ";" + bestline[4] + ";" + bestline[5] + ";" + bestline[6] + ";" + bestline[7] + "\n")
+            file_.write(bestline[1] + "," + subfolder[sub] + "," + bestline[2] + "," + str(peak_perf/float(bestline[2]) * 100)  + "," + time_autotvm + "," + peak_perf_autotvm + "," + bestline[4].replace(",", ";")  + "," + bestline[5].replace(",", ";")  + "," + bestline[6].replace(",", ";")  + "," + bestline[7].replace(",", ";") + "\n")
 
 
 file_.close()
