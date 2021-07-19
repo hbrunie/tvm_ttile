@@ -90,22 +90,18 @@ def batched_nms_pattern(boxes, scores, idxs, iou_threshold, num_boxes, indices):
     """
     one = is_constant()
 
-    # Equivelent PyTorch code from above snippet
+    # Equivalent PyTorch code from above snippet
     # offsets = idxs.to(boxes) * (max_coordinate + torch.tensor(1).to(boxes))
     cast = is_op("cast")(idxs)
     mx = is_op("max")(boxes)
     add = is_op("add")(mx, one)
     mul = is_op("multiply")(cast, add)
 
-    # The following doesn't appear in the above Relay snippet. It is required for dynamic
-    # stride_slice handling
     shape_of = is_op("shape_of")(mul)
     cast = is_op("cast")(shape_of)
-    # This corresponds to offsets[:, None], where offsets is the result of multiplication
-    dyn_strided_slice = dyn_strided_slice_pattern(mul, cast)
 
     # Add offsets to the boxes
-    expand_dims = is_op("expand_dims")(dyn_strided_slice)
+    expand_dims = is_op("expand_dims")(mul)
     add = is_op("add")(boxes, expand_dims)
 
     # The rest of patterns correspond to the PyTorch frontend conversion

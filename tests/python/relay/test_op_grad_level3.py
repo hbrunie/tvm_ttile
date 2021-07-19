@@ -40,10 +40,10 @@ def test_clip():
         fwd_func = run_infer_type(fwd_func)
         bwd_func = run_infer_type(gradient(fwd_func))
 
-        for target, ctx in tvm.testing.enabled_targets():
-            intrp = relay.create_executor(ctx=ctx, target=target)
+        for target, dev in tvm.testing.enabled_targets():
+            intrp = relay.create_executor(device=dev, target=target)
             op_res, (op_grad,) = intrp.evaluate(bwd_func)(data)
-            np.testing.assert_allclose(op_grad.asnumpy(), ref_grad, rtol=0.01)
+            np.testing.assert_allclose(op_grad.numpy(), ref_grad, rtol=0.01)
 
 
 def verify_transpose_grad(d_shape, axes=None):
@@ -66,6 +66,13 @@ def test_negative_grad():
 def test_cast_grad():
     data = relay.var("data", relay.TensorType((10, 4), "float32"))
     fwd_func = relay.Function([data], relay.cast(data, "float64"))
+    check_grad(fwd_func)
+
+
+def test_cast_like_grad():
+    data = relay.var("data", shape=(10, 4), dtype="float32")
+    like = relay.var("like", shape=(1,), dtype="float64")
+    fwd_func = relay.Function([data, like], relay.cast_like(data, like))
     check_grad(fwd_func)
 
 
@@ -146,7 +153,7 @@ def test_zeros_ones_grad_const_ints():
 
 def test_zeros_ones_grad_const_expr():
     # when shape is static (i.e. not an input), there is no gradient at all
-    shape_const = relay.const(np.array([2, 3, 4]), dtype="int32")
+    shape_const = relay.const(np.array([2, 3, 4]), dtype="int32") * relay.const(1, dtype="int32")
     static_ty = relay.TensorType([2, 3, 4], dtype="float32")
     dyn_ty = relay.TensorType([relay.Any(), relay.Any(), relay.Any()], dtype="float32")
     expected_ty_static = relay.TupleType([static_ty, relay.TupleType([])])
@@ -173,11 +180,11 @@ def test_zeros_ones_grad_dynamic():
         fwd_func = relay.Function([shape_data], op(shape_data, dtype="float32"))
         bwd_func = run_infer_type(gradient(run_infer_type(fwd_func)))
 
-        for target, ctx in tvm.testing.enabled_targets():
-            intrp = relay.create_executor(ctx=ctx, target=target)
+        for target, dev in tvm.testing.enabled_targets():
+            intrp = relay.create_executor(device=dev, target=target)
             res, (grad,) = intrp.evaluate(bwd_func)(dyn_shape)
-            tvm.testing.assert_allclose(res.asnumpy(), op_ref(dyn_shape, dtype="float32"))
-            tvm.testing.assert_allclose(grad.asnumpy(), np.zeros((rank,), dtype="int32"))
+            tvm.testing.assert_allclose(res.numpy(), op_ref(dyn_shape, dtype="float32"))
+            tvm.testing.assert_allclose(grad.numpy(), np.zeros((rank,), dtype="int32"))
 
 
 if __name__ == "__main__":
