@@ -37,6 +37,7 @@ parser.add_argument('--skylake_avx512',action='store_true',
 argcomplete.autocomplete(parser)
 args = parser.parse_args()
 
+
 def residual_unit(
     data,
     num_filter,
