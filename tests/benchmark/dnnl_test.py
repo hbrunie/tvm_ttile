@@ -16,13 +16,6 @@ from tvm.relay.op.annotation import compiler_begin, compiler_end
 from tvm.relay.op.contrib.register import get_pattern_table
 from tvm.relay.build_module import bind_params_by_name
 
-def set_func_attr(func, compile_name, symbol_name):
-    func = func.with_attr("Primitive", tvm.tir.IntImm("int32", 1))
-    func = func.with_attr("Inline", tvm.tir.IntImm("int32", 1))
-    func = func.with_attr("Compiler", compile_name)
-    func = func.with_attr("global_symbol", symbol_name)
-    return func
-
 class WholeGraphAnnotator(ExprMutator):
     """
     An annotator that creates a compiler for an entire graph.
@@ -51,57 +44,20 @@ class WholeGraphAnnotator(ExprMutator):
 
 
 def check_result(
-    mod, map_inputs, out_shape, result, tol=1e-5, target="llvm", device=tvm.cpu(), params=None
+    mod, map_inputs, out_shape, result, tol=1e-5, target="llvm -mcpu=skylake-avx512", device=tvm.cpu(), params=None
 ):
     ishape = out_shape
-    def update_lib(lib):
-        """ NOT USED
-            only inside check_vm_result
-        """
-        test_dir = os.path.dirname(os.path.realpath(os.path.expanduser(__file__)))
-        source_dir = os.path.join(test_dir, "..", "..", "..")
-        contrib_path = os.path.join(source_dir, "src", "runtime", "contrib")
-
-        kwargs = {}
-        kwargs["options"] = ["-O2", "-std=c++14", "-I" + contrib_path]
-        tmp_path = utils.tempdir()
-        lib_name = "lib.so"
-        lib_path = tmp_path.relpath(lib_name)
-        lib.export_library(lib_path, fcompile=False, **kwargs)
-        lib = runtime.load_module(lib_path)
-
-        return lib
-
-    def check_vm_result():
-        """ NOT USED
-            #check_vm_result()
-        """
-        compile_engine.get().clear()
-        with tvm.transform.PassContext(opt_level=3):
-            exe = relay.vm.compile(mod, target=target, params=params)
-        code, lib = exe.save()
-        lib = update_lib(lib)
-        exe = runtime.vm.Executable.load_exec(code, lib)
-        vm = runtime.vm.VirtualMachine(exe, device)
-        outs = vm.run(**map_inputs)
-        outs = outs if isinstance(outs, runtime.container.ADT) else [outs]
-        results = result if isinstance(result, list) else [result]
-        for out, ref in zip(outs, results):
-            tvm.testing.assert_allclose(out.numpy(), ref, rtol=tol, atol=tol)
 
     def check_graph_executor_result(ishape):
         #compile_engine.get().clear()
         with tvm.transform.PassContext(opt_level=3):
             lib = relay.build(mod, target=target, params=params)
         from tvm.contrib import graph_executor
-        #lib.export_library("compiled_lib.so")
-        #lib: tvm.runtime.Module = tvm.runtime.load_module("compiled_lib.so")
         dev = tvm.cpu(0)
         dtype="float32"
         data = tvm.nd.array((np.random.uniform(size=ishape)).astype(dtype))
         gmod = graph_executor.GraphModule(lib["default"](dev))
         gmod.set_input("data", data)
-        #gmod.run()
         print("Evaluate inference time cost...")
         ftimer = gmod.module.time_evaluator("run", dev, number=10, repeat=10)
         print(ftimer)
@@ -110,21 +66,6 @@ def check_result(
             "Mean inference time (std dev): %.2f ms (%.2f ms)"
             % (np.mean(prof_res), np.std(prof_res))
         )
-
-        #for name, data in map_inputs.items():
-        #    rt_mod.set_input(name, data)
-        #rt_mod.set_input(**param)
-        #rt_mod.run()
-
-        out_shapes = out_shape if isinstance(out_shape, list) else [out_shape]
-        results = result if isinstance(result, list) else [result]
-
-        #for idx, shape in enumerate(out_shapes):
-        #    out = tvm.nd.empty(shape, device=device)
-        #    out = rt_mod.get_output(idx, out)
-        #    tvm.testing.assert_allclose(out.numpy(), results[idx], rtol=tol, atol=tol)
-
-    #check_vm_result()
     check_graph_executor_result(ishape)
 
 def test_extern_dnnl():
@@ -135,50 +76,22 @@ def test_extern_dnnl():
     x = 112
     y = 112
     w = h = 3
-    c = f = 32
+    f = 32
+    c = 32
     dtype = "float32"
     ishape = (1, c, x, y) #b c x y
     w1shape = (f, 1, w, h) ## f b w h
 
-    def expected():
-        """ NOt called
-            #assert tvm.ir.structural_equal(mod, expected(), map_free_vars=True)
-        """
-        data0 = relay.var("data", shape=(ishape), dtype=dtype)
-        input0 = relay.var("input", shape=(w1shape), dtype=dtype)
-        depthwise_conv2d_1 = relay.nn.conv2d(
-            data0, input0, kernel_size=(3, 3), padding=(1, 1), groups=32
-        )
-        depthwise_conv2d_2 = relay.nn.conv2d(
-            depthwise_conv2d_1, input0, kernel_size=(3, 3), padding=(1, 1), groups=32
-        )
-        out = relay.add(depthwise_conv2d_1, depthwise_conv2d_2)
-
-        func = relay.Function([data0, input0], out)
-        func = set_func_attr(func, "dnnl", "tvmgen_default_dnnl_0")
-        glb_var = relay.GlobalVar("tvmgen_default_dnnl_0")
-        mod = tvm.IRModule()
-        mod[glb_var] = func
-        mod = transform.InferType()(mod)
-
-        data = relay.var("data", shape=(ishape), dtype=dtype)
-        weight = relay.var("input", shape=(w1shape), dtype=dtype)
-        main_f = relay.Function([data, weight], glb_var(data, weight))
-        mod["main"] = main_f
-        mod = transform.InferType()(mod)
-
-        return mod
-
     def get_func():
         data = relay.var("data", shape=(ishape), dtype=dtype)
         weight1 = relay.var("weight1", shape=(w1shape), dtype=dtype)
-        depthwise_conv2d_1 = relay.nn.conv2d(
-            data, weight1, kernel_size=(3, 3), padding=(1, 1), groups=32
+        out = relay.nn.conv2d(
+            data, weight1, kernel_size=(w, h), padding=(1, 1), groups=c
         )
-        depthwise_conv2d_2 = relay.nn.conv2d(
-            depthwise_conv2d_1, weight1, kernel_size=(3, 3), padding=(1, 1), groups=32
-        )
-        out = relay.add(depthwise_conv2d_1, depthwise_conv2d_2)
+        #depthwise_conv2d_2 = relay.nn.conv2d(
+        #    depthwise_conv2d_1, weight1, kernel_size=(3, 3), padding=(1, 1), groups=32
+        #)
+        #out = relay.add(depthwise_conv2d)
 
         return relay.Function([data, weight1], out)
 
@@ -186,8 +99,6 @@ def test_extern_dnnl():
     mod["main"] = WholeGraphAnnotator("dnnl").visit(get_func())
     mod = transform.PartitionGraph()(mod)
     mod = transform.InferType()(mod)
-
-    #assert tvm.ir.structural_equal(mod, expected(), map_free_vars=True)
 
     ref_mod = tvm.IRModule()
     ref_mod["main"] = get_func()
@@ -197,7 +108,7 @@ def test_extern_dnnl():
 
     ref_ex = relay.create_executor("graph", mod=ref_mod, device=tvm.cpu())
     ref_res = ref_ex.evaluate()(i_data, w1_data)
-    ishape = (1, 32, 112, 112) ## b c x y
+    ishape = (1, c, x, y) ## b c x y
     check_result(
         mod, {"data": i_data, "weight1": w1_data}, ishape, ref_res.numpy(), tol=1e-5
     )
