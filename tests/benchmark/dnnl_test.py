@@ -53,6 +53,7 @@ class WholeGraphAnnotator(ExprMutator):
 def check_result(
     mod, map_inputs, out_shape, result, tol=1e-5, target="llvm", device=tvm.cpu(), params=None
 ):
+    ishape = out_shape
     def update_lib(lib):
         """ NOT USED
             only inside check_vm_result
@@ -88,15 +89,14 @@ def check_result(
         for out, ref in zip(outs, results):
             tvm.testing.assert_allclose(out.numpy(), ref, rtol=tol, atol=tol)
 
-    def check_graph_executor_result():
-        compile_engine.get().clear()
+    def check_graph_executor_result(ishape):
+        #compile_engine.get().clear()
         with tvm.transform.PassContext(opt_level=3):
             lib = relay.build(mod, target=target, params=params)
         from tvm.contrib import graph_executor
-        lib.export_library("compiled_lib.so")
-        lib: tvm.runtime.Module = tvm.runtime.load_module("compiled_lib.so")
+        #lib.export_library("compiled_lib.so")
+        #lib: tvm.runtime.Module = tvm.runtime.load_module("compiled_lib.so")
         dev = tvm.cpu(0)
-        ishape = (1, 32, 112, 112) ## b c x y
         dtype="float32"
         data = tvm.nd.array((np.random.uniform(size=ishape)).astype(dtype))
         gmod = graph_executor.GraphModule(lib["default"](dev))
@@ -125,7 +125,7 @@ def check_result(
         #    tvm.testing.assert_allclose(out.numpy(), results[idx], rtol=tol, atol=tol)
 
     #check_vm_result()
-    check_graph_executor_result()
+    check_graph_executor_result(ishape)
 
 def test_extern_dnnl():
     if not tvm.get_global_func("relay.ext.dnnl", True):
@@ -197,8 +197,9 @@ def test_extern_dnnl():
 
     ref_ex = relay.create_executor("graph", mod=ref_mod, device=tvm.cpu())
     ref_res = ref_ex.evaluate()(i_data, w1_data)
+    ishape = (1, 32, 112, 112) ## b c x y
     check_result(
-        mod, {"data": i_data, "weight1": w1_data}, (1, 32, 112, 112), ref_res.numpy(), tol=1e-5
+        mod, {"data": i_data, "weight1": w1_data}, ishape, ref_res.numpy(), tol=1e-5
     )
 
 test_extern_dnnl()
