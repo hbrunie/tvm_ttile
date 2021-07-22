@@ -88,25 +88,45 @@ def check_result(
 
     def check_graph_executor_result():
         compile_engine.get().clear()
+        #with tvm.transform.PassContext(opt_level=3):
+        #    json, lib, param = relay.build(mod, target=target, params=params)
+        #lib = update_lib(lib)
+        #rt_mod = tvm.contrib.graph_executor.create(json, lib, device)
         with tvm.transform.PassContext(opt_level=3):
-            json, lib, param = relay.build(mod, target=target, params=params)
-        lib = update_lib(lib)
-        rt_mod = tvm.contrib.graph_executor.create(json, lib, device)
+            lib = relay.build(mod, target=target, params=params)
+        from tvm.contrib import graph_executor
+        lib.export_library("compiled_lib.so")
+        lib: tvm.runtime.Module = tvm.runtime.load_module("compiled_lib.so")
+        dev = tvm.cpu(0)
+        ishape = (1, 32, 112, 112) ## b c x y
+        dtype="float32"
+        data = tvm.nd.array((np.random.uniform(size=ishape)).astype(dtype))
+        gmod = graph_executor.GraphModule(lib["default"](dev))
+        gmod.set_input("data", data)
+        #gmod.run()
+        print("Evaluate inference time cost...")
+        ftimer = gmod.module.time_evaluator("run", dev, number=10, repeat=10)
+        print(ftimer)
+        prof_res = np.array(ftimer().results) * 1000  # convert to millisecond
+        print(
+            "Mean inference time (std dev): %.2f ms (%.2f ms)"
+            % (np.mean(prof_res), np.std(prof_res))
+        )
 
-        for name, data in map_inputs.items():
-            rt_mod.set_input(name, data)
-        rt_mod.set_input(**param)
-        rt_mod.run()
+        #for name, data in map_inputs.items():
+        #    rt_mod.set_input(name, data)
+        #rt_mod.set_input(**param)
+        #rt_mod.run()
 
         out_shapes = out_shape if isinstance(out_shape, list) else [out_shape]
         results = result if isinstance(result, list) else [result]
 
-        for idx, shape in enumerate(out_shapes):
-            out = tvm.nd.empty(shape, device=device)
-            out = rt_mod.get_output(idx, out)
-            tvm.testing.assert_allclose(out.numpy(), results[idx], rtol=tol, atol=tol)
+        #for idx, shape in enumerate(out_shapes):
+        #    out = tvm.nd.empty(shape, device=device)
+        #    out = rt_mod.get_output(idx, out)
+        #    tvm.testing.assert_allclose(out.numpy(), results[idx], rtol=tol, atol=tol)
 
-    check_vm_result()
+    #check_vm_result()
     check_graph_executor_result()
 
 def test_extern_dnnl():
@@ -114,11 +134,18 @@ def test_extern_dnnl():
         print("skip because DNNL codegen is not available")
         return
 
+    x = 112
+    y = 112
+    w = h = 3
+    c = f = 32
     dtype = "float32"
-    ishape = (1, 32, 14, 14)
-    w1shape = (32, 1, 3, 3)
+    ishape = (1, c, x, y) #b c x y
+    w1shape = (f, 1, w, h) ## f b w h
 
     def expected():
+        """ NOt called
+            #assert tvm.ir.structural_equal(mod, expected(), map_free_vars=True)
+        """
         data0 = relay.var("data", shape=(ishape), dtype=dtype)
         input0 = relay.var("input", shape=(w1shape), dtype=dtype)
         depthwise_conv2d_1 = relay.nn.conv2d(
@@ -162,7 +189,7 @@ def test_extern_dnnl():
     mod = transform.PartitionGraph()(mod)
     mod = transform.InferType()(mod)
 
-    assert tvm.ir.structural_equal(mod, expected(), map_free_vars=True)
+    #assert tvm.ir.structural_equal(mod, expected(), map_free_vars=True)
 
     ref_mod = tvm.IRModule()
     ref_mod["main"] = get_func()
@@ -173,6 +200,7 @@ def test_extern_dnnl():
     ref_ex = relay.create_executor("graph", mod=ref_mod, device=tvm.cpu())
     ref_res = ref_ex.evaluate()(i_data, w1_data)
     check_result(
-        mod, {"data": i_data, "weight1": w1_data}, (1, 32, 14, 14), ref_res.numpy(), tol=1e-5
+        mod, {"data": i_data, "weight1": w1_data}, (1, 32, 112, 112), ref_res.numpy(), tol=1e-5
     )
+
 test_extern_dnnl()
