@@ -44,7 +44,7 @@ class WholeGraphAnnotator(ExprMutator):
 
 
 def check_result(
-    mod, map_inputs, out_shape, result, tol=1e-5, target="llvm -mcpu=skylake-avx512", device=tvm.cpu(), params=None
+    mod, map_inputs, out_shape, tol=1e-5, target="llvm -mcpu=skylake-avx512", device=tvm.cpu(), params=None
 ):
     ishape = out_shape
 
@@ -59,7 +59,7 @@ def check_result(
         gmod = graph_executor.GraphModule(lib["default"](dev))
         gmod.set_input("data", data)
         print("Evaluate inference time cost...")
-        ftimer = gmod.module.time_evaluator("run", dev, number=10, repeat=10)
+        ftimer = gmod.module.time_evaluator("run", dev, number=99, repeat=10)
         print(ftimer)
         prof_res = np.array(ftimer().results) * 1000  # convert to millisecond
         print(
@@ -76,17 +76,19 @@ def test_extern_dnnl():
     x = 112
     y = 112
     w = h = 3
-    f = 32
-    c = 32
+    f = 64
+    c = 64
+    stride = 2
+    batch = 1
     dtype = "float32"
-    ishape = (1, c, x, y) #b c x y
-    w1shape = (f, 1, w, h) ## f b w h
+    ishape = (batch, c, x, y) #b c x y Batch/Cin/Width/Height (NCWH)
+    w1shape = (f, batch, w, h) ## f b w h Cout/Batch/R/S
 
     def get_func():
         data = relay.var("data", shape=(ishape), dtype=dtype)
         weight1 = relay.var("weight1", shape=(w1shape), dtype=dtype)
         out = relay.nn.conv2d(
-            data, weight1, kernel_size=(w, h), padding=(1, 1), groups=c
+            data, weight1, kernel_size=(w, h), padding=(stride, stride), groups=c
         )
         #depthwise_conv2d_2 = relay.nn.conv2d(
         #    depthwise_conv2d_1, weight1, kernel_size=(3, 3), padding=(1, 1), groups=32
@@ -106,11 +108,8 @@ def test_extern_dnnl():
     i_data = np.random.uniform(0, 1, ishape).astype(dtype)
     w1_data = np.random.uniform(0, 1, w1shape).astype(dtype)
 
-    ref_ex = relay.create_executor("graph", mod=ref_mod, device=tvm.cpu())
-    ref_res = ref_ex.evaluate()(i_data, w1_data)
-    ishape = (1, c, x, y) ## b c x y
     check_result(
-        mod, {"data": i_data, "weight1": w1_data}, ishape, ref_res.numpy(), tol=1e-5
+        mod, {"data": i_data, "weight1": w1_data}, ishape, tol=1e-5
     )
 
 test_extern_dnnl()
