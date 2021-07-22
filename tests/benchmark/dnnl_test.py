@@ -53,11 +53,10 @@ class WholeGraphAnnotator(ExprMutator):
 def check_result(
     mod, map_inputs, out_shape, result, tol=1e-5, target="llvm", device=tvm.cpu(), params=None
 ):
-    if sys.platform == "win32":
-        print("Skip test on Windows for now")
-        return
-
     def update_lib(lib):
+        """ NOT USED
+            only inside check_vm_result
+        """
         test_dir = os.path.dirname(os.path.realpath(os.path.expanduser(__file__)))
         source_dir = os.path.join(test_dir, "..", "..", "..")
         contrib_path = os.path.join(source_dir, "src", "runtime", "contrib")
@@ -73,6 +72,9 @@ def check_result(
         return lib
 
     def check_vm_result():
+        """ NOT USED
+            #check_vm_result()
+        """
         compile_engine.get().clear()
         with tvm.transform.PassContext(opt_level=3):
             exe = relay.vm.compile(mod, target=target, params=params)
@@ -88,10 +90,6 @@ def check_result(
 
     def check_graph_executor_result():
         compile_engine.get().clear()
-        #with tvm.transform.PassContext(opt_level=3):
-        #    json, lib, param = relay.build(mod, target=target, params=params)
-        #lib = update_lib(lib)
-        #rt_mod = tvm.contrib.graph_executor.create(json, lib, device)
         with tvm.transform.PassContext(opt_level=3):
             lib = relay.build(mod, target=target, params=params)
         from tvm.contrib import graph_executor
