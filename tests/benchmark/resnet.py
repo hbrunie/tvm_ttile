@@ -305,6 +305,7 @@ def get_net(
             raise ValueError("no experiments done on num_layers {}".format(num_layers))
         units = per_unit * num_stages
     else:
+        print("Resnet",num_layers)
         if num_layers >= 50:
             filter_list = [64, 256, 512, 1024, 2048]
             bottle_neck = True
