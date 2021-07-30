@@ -86,19 +86,24 @@ from .tensor_intrin import  intrin_conv
 from .tensor_intrin import  conv_impl
 
 import pickle
-def schedule_conv2d_nhwc(outs):
+def schedule_conv2d_nhwc_ttile(outs):
     """Create schedule for conv2d_nhwc"""
-    info_tile_pickle_path="path/to/info_tile.pkl"
+    old_outs = outs
     outs = [outs] if isinstance(outs, te.tensor.Tensor) else outs
     s = te.create_schedule([x.op for x in outs])
     output_op = outs[0].op
     Out1 = outs[0]
 
     ## TTILE Schedule
-    ## Load info_tile from already compute best schedules
-    info_tile = pickle.load(info_tile_pickle_path)
     locals()["axe_batch1_0"], locals()["axe_xx1_0"], locals()["axe_yy1_0"], locals()["axe_out_channels1_0"] = Out1.op.axis
     locals()["axe_in_channels1_0"], locals()["axe_h1_0"], locals()["axe_w1_0"] = Out1.op.reduce_axis
+    ## Switch between different convolutions for ResNet18
+    print("Convolution sizes:")
+    print(axe_batch1_0, axe_xx1_0, axe_yy1_0, axe_out_channels1_0)
+    return schedule_conv2d_nhwc(outs)
+    ## Load info_tile from already compute best schedules
+    info_tile_pickle_path="path/to/info_tile.pkl"
+    info_tile = pickle.load(info_tile_pickle_path)
     for id_conv in [1]:
         for factor in ["factor_out_channels", "factor_yy", "factor_xx", "factor_in_channels", "factor_h", "factor_w"]:
             for nb_factor in range(len(info_tile[id_conv][factor])):

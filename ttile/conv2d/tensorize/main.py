@@ -385,7 +385,8 @@ def conv2d(name_conv, name_architecture, version_avx, nb_configuration, name_cpu
     os.environ["TVM_AFFINITY"] = str(1)
 
 
-    PATH_MATMUL = os.getcwd().split("tvm_ttile")[0] + "matmul_bench/ml_utils"
+    PATH_MATMUL = os.getcwd().split("tvm")[0] + "matmul_bench/ml_utils"
+    assert PATH_MATMUL == "/home/hbrunie/matmul_bench/ml_utils"
 
     informations_ttile = parser.parser(name_conv, name_architecture, nb_configuration, PATH_MATMUL,
             lpar_methods, method_parser, NUM_THREAD)
@@ -425,7 +426,7 @@ def conv2d(name_conv, name_architecture, version_avx, nb_configuration, name_cpu
             # Log parameters into a pickle file so we can restart it later
             letters = string.ascii_letters
             hashkey = ''.join(random.choice(letters) for i in range(6))  
-            pickle_filename = "{}_{}_{}_err.pyc".format(name_conv, hashkey, id_information_ttile)
+            pickle_filename = "pickle_files/{}_{}_{}_err.pkl".format(name_conv, hashkey, id_information_ttile)
             with open(pickle_filename, 'wb') as f:
                 pickle.dump(information_ttile, f)
 
