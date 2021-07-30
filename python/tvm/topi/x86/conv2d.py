@@ -82,6 +82,103 @@ def _conv2d_infer_layout(workload, cfg):
     return ((in_shape, in_layout),), ((out_shape, out_layout),)
 
 
+from .tensor_intrin import  intrin_conv
+from .tensor_intrin import  conv_impl
+
+import pickle
+def schedule_conv2d_nhwc_ttile(outs):
+    """Create schedule for conv2d_nhwc"""
+    old_outs = outs
+    outs = [outs] if isinstance(outs, te.tensor.Tensor) else outs
+    s = te.create_schedule([x.op for x in outs])
+    output_op = outs[0].op
+    Out1 = outs[0]
+
+    ## TTILE Schedule
+    locals()["axe_batch1_0"], locals()["axe_xx1_0"], locals()["axe_yy1_0"], locals()["axe_out_channels1_0"] = Out1.op.axis
+    locals()["axe_in_channels1_0"], locals()["axe_h1_0"], locals()["axe_w1_0"] = Out1.op.reduce_axis
+    ## Switch between different convolutions for ResNet18
+    print("Convolution sizes:")
+    print(axe_batch1_0, axe_xx1_0, axe_yy1_0, axe_out_channels1_0)
+    return schedule_conv2d_nhwc(outs)
+    ## Load info_tile from already compute best schedules
+    info_tile_pickle_path="path/to/info_tile.pkl"
+    info_tile = pickle.load(info_tile_pickle_path)
+    for id_conv in [1]:
+        for factor in ["factor_out_channels", "factor_yy", "factor_xx", "factor_in_channels", "factor_h", "factor_w"]:
+            for nb_factor in range(len(info_tile[id_conv][factor])):
+                locals()[factor + str(id_conv) + "_" + str(nb_factor)] = info_tile[id_conv][factor][nb_factor]
+    for id_conv in [1]:
+        for name_axe in ["out_channels", "xx", "yy", "in_channels", "h", "w"]:
+            factor = "factor_" + name_axe
+            for nb_factor in range(len(info_tile[id_conv][factor])):
+                axe0 = "axe_" + name_axe + str(id_conv) + "_" + str(nb_factor)
+                axe1 = "axe_" + name_axe + str(id_conv) + "_" + str(nb_factor + 1)
+                locals()[axe0], locals()[axe1] = s[Out1].split(locals()[axe0], factor = locals()["factor_" + name_axe + str(id_conv) + "_" + str(nb_factor)])
+    order1 = []
+    order_string1 = info_tile[1]["order"]
+    order1 = [locals()["axe_batch1_0"]]
+    for k in order_string1:
+        order1 += [locals()[k]]
+    s[Out1].reorder(*order1)
+    fuse1 = info_tile[1]["fuse"]
+    if len(fuse1) != 0:
+        if len(fuse1) > 1:
+            fuse_loop1 = s[Out1].fuse(locals()[fuse1[0]], locals()[fuse1[1]])
+            for k in range(2, len(fuse1)):
+                fuse_loop1 = s[Out1].fuse(fuse_loop1, locals()[fuse1[k]])
+        else:
+            fuse_loop1 = locals()[fuse1[0]]
+        s[Out1].parallel(fuse_loop1)
+    stride_w = stride_h = 1
+    conv1 = intrin_conv("gen_conv", info_tile[1]["w_t"], info_tile[1]["h_t"], info_tile[1]["c_t"], info_tile[1]["f_t"], info_tile[1]["x_t"], info_tile[1]["y_t"], stride_w, stride_h)
+    version_avx = "avx512"
+    if version_avx == "avx2":
+        target = "llvm -mcpu=core-avx2"
+        option_compilation = ["-mavx2", "-mfma"]
+    else:
+        target = "llvm -mcpu=skylake-avx512"
+        option_compilation = ["-mavx512f", "-mfma"]
+    ## List files with one or two elements: without or with Lambda micro kernels
+    files = ["path/to/Cfile_microkernel.c"]
+    s[Out1].tensorize(locals()[info_tile[1]["axe_to_tensorize"]], conv1)
+    s[Out1].pragma(locals()["axe_batch1_0"], "import_llvm", conv_impl(option_compilation, files))
+
+    def _callback(op):
+        if "conv2d_nhwc" in op.tag:
+            conv = op.output(0)
+            kernel = op.input_tensors[1]
+            if isinstance(kernel.op, tvm.te.ComputeOp) and "dilate" in kernel.op.tag:
+                s[kernel].compute_inline()
+
+            data = op.input_tensors[0]
+            data_pad = None
+            if isinstance(data.op, tvm.te.ComputeOp) and "pad" in data.op.tag:
+                data_pad = data
+                data = data_pad.op.input_tensors[0]
+
+            n_pad, h_pad, w_pad, c_pad = data_pad.op.axis
+            pad_fused = s[data_pad].fuse(n_pad, h_pad)
+            s[data_pad].parallel(pad_fused)
+            C = conv
+            n, h, w, c = C.op.axis
+            s[C].vectorize(c)
+
+            O = output_op.output(0)
+            if len(O.op.axis) == 4:  # schedule bias + bn + relu
+                n, h, w, c = O.op.axis
+                fused = s[O].fuse(n, h, w)
+                s[O].parallel(fused)
+                channels = int(O.shape[-1])
+                if channels % 64 == 0:
+                    c, ci = s[O].split(c, 64)
+                    s[O].vectorize(ci)
+                if C != O:
+                    s[C].compute_at(s[O], c)
+
+    traverse_inline(s, output_op, _callback)
+    return s
+
 def schedule_conv2d_nhwc(outs):
     """Create schedule for conv2d_nhwc"""
     outs = [outs] if isinstance(outs, te.tensor.Tensor) else outs

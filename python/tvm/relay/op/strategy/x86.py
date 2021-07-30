@@ -134,44 +134,52 @@ def conv2d_strategy_cpu(attrs, inputs, out_type, target):
         elif _NCHWc_matcher.match(layout):  # check if layout is NCHWxc
             assert _OIHWio_matcher.match(kernel_layout)  # check if kernel is OIHWio
             return conv2d_NCHWc_strategy_cpu(attrs, inputs, out_type, target)
+        ## Adding CONV2d by TTILE
         elif layout == "NHWC":
-            assert kernel_layout == "HWIO"
-            if not is_auto_scheduler_enabled():
-                logger.warning("conv2d NHWC layout is not optimized for x86 with autotvm.")
-            strategy.add_implementation(
-                wrap_compute_conv2d(topi.nn.conv2d_nhwc, need_auto_scheduler_layout=True),
-                wrap_topi_schedule(topi.x86.schedule_conv2d_nhwc),
-                name="conv2d_nhwc.x86",
-            )
-
-            judge_winograd_auto_scheduler = False
-            if len(kernel.shape) == 4:
-                kernel_h, kernel_w, _, co = get_const_tuple(kernel.shape)
-                judge_winograd_auto_scheduler = (
-                    "float" in data.dtype
-                    and "float" in kernel.dtype
-                    and kernel_h == 3
-                    and kernel_w == 3
-                    and stride_h == 1
-                    and stride_w == 1
-                    and dilation_h == 1
-                    and dilation_w == 1
-                    and 64 < co < 512
-                    # The last condition of co is based on our profiling of resnet workloads
-                    # on skylake avx512 machines. We found winograd is faster than direct
-                    # only when co is within this range
-                )
-
-            # register auto-scheduler implementations
-            if is_auto_scheduler_enabled() and judge_winograd_auto_scheduler:
+            if "ttile" in target.libs:
                 strategy.add_implementation(
-                    wrap_compute_conv2d(
-                        topi.nn.conv2d_winograd_nhwc, need_auto_scheduler_layout=True
-                    ),
-                    naive_schedule,  # this implementation should never be picked by autotvm
-                    name="conv2d_nhwc.winograd",
-                    plevel=15,
+                    wrap_compute_conv2d(topi.nn.conv2d_nhwc, need_auto_scheduler_layout=True),
+                    wrap_topi_schedule(topi.x86.schedule_conv2d_nhwc_ttile),
+                    name="conv2d_nhwc_ttile.x86",
                 )
+            else:
+                assert kernel_layout == "HWIO"
+                if not is_auto_scheduler_enabled():
+                    logger.warning("conv2d NHWC layout is not optimized for x86 with autotvm.")
+                strategy.add_implementation(
+                    wrap_compute_conv2d(topi.nn.conv2d_nhwc, need_auto_scheduler_layout=True),
+                    wrap_topi_schedule(topi.x86.schedule_conv2d_nhwc),
+                    name="conv2d_nhwc.x86",
+                )
+
+                judge_winograd_auto_scheduler = False
+                if len(kernel.shape) == 4:
+                    kernel_h, kernel_w, _, co = get_const_tuple(kernel.shape)
+                    judge_winograd_auto_scheduler = (
+                        "float" in data.dtype
+                        and "float" in kernel.dtype
+                        and kernel_h == 3
+                        and kernel_w == 3
+                        and stride_h == 1
+                        and stride_w == 1
+                        and dilation_h == 1
+                        and dilation_w == 1
+                        and 64 < co < 512
+                        # The last condition of co is based on our profiling of resnet workloads
+                        # on skylake avx512 machines. We found winograd is faster than direct
+                        # only when co is within this range
+                    )
+
+                # register auto-scheduler implementations
+                if is_auto_scheduler_enabled() and judge_winograd_auto_scheduler:
+                    strategy.add_implementation(
+                        wrap_compute_conv2d(
+                            topi.nn.conv2d_winograd_nhwc, need_auto_scheduler_layout=True
+                        ),
+                        naive_schedule,  # this implementation should never be picked by autotvm
+                        name="conv2d_nhwc.winograd",
+                        plevel=15,
+                    )
         elif layout == "HWCN":
             assert kernel_layout == "HWIO"
             if not is_auto_scheduler_enabled():
