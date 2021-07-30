@@ -211,7 +211,6 @@ def _get_workload(data, kernel, stride, padding, dilation, out_dtype, data_layou
         WSTR,
     )
 
-
 def conv2d_nchw(Input, Filter, stride, padding, dilation, out_dtype=None):
     """Convolution operator in NCHW layout.
 
