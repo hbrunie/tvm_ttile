@@ -125,7 +125,6 @@ def schedule_conv2d_nhwc(outs):
         else:
             fuse_loop1 = locals()[fuse1[0]]
         s[Out1].parallel(fuse_loop1)
-    ## TODO: stride fixed to 1
     stride_w = stride_h = 1
     conv1 = intrin_conv("gen_conv", info_tile[1]["w_t"], info_tile[1]["h_t"], info_tile[1]["c_t"], info_tile[1]["f_t"], info_tile[1]["x_t"], info_tile[1]["y_t"], stride_w, stride_h)
     version_avx = "avx512"

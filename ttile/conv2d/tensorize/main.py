@@ -516,17 +516,25 @@ def conv2d(name_conv, name_architecture, version_avx, nb_configuration, name_cpu
                 schema_str += str(x) + ":" + str(y) + ", "
             csvdump_str = None
             order1 = ",".join(information_ttile[1]["order"])
-            csvdump_str  = str(id_information_ttile) + ";" + str(id_method_of_parallelization) + ";" + name_conv + ";" + str(result) + ";" + str(std) + ";" 
+            # IdRun;hashkey;InfottilePickleName;MethodParallelization;NameConv;Time(ms);
+            csvdump_str  = str(id_information_ttile) + ";" + hashkey + ";" + pickle_filename +";" 
+            # MethodParallelization;NameConv;Time(ms);std;
+            csvdump_str += str(id_method_of_parallelization) + ";" + name_conv + ";" + str(result) + ";" + str(std) + ";" 
+            # NbMicroKernel;AxeFuse1;SizeAxeFuse1;order1;
             csvdump_str += str(len(information_ttile)) + ";" + axe_fuse1 + ";" + str(size_axe_fuse1) + ";" + order1 + ";"
+            # AxeFuse2;SizeAxeFuse2;order2;
             axe_fuse2 = ""
             size_axe_fuse2 = ""
             order2 = ""
             ## Dump CSV data row for 2 kernels (Lambda)
             if len(information_ttile) != 1:
+                # AxeFuse2;SizeAxeFuse2;order2;
                 axe_fuse2 = ",".join(information_ttile[2]["fuse"])
                 size_axe_fuse2 = str(information_ttile[2]["size_axe_fuse"])
                 order2 = ",".join(information_ttile[2]["order"])
+            # AxeFuse2;SizeAxeFuse2;order2;
             csvdump_str += axe_fuse2 + ";" + size_axe_fuse2 + ";" + order2 + ";"
+            # Schema;Time_search
             csvdump_str += schema_str + ";" + str(search_time) + "\n"
             file_result.write(csvdump_str)
             file_result.close()
