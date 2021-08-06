@@ -1,18 +1,10 @@
-Compile tvm with:
-` cmake -DEXTERN_LIBRARY_DNNL=/home/hbrunie/usr/local/lib/libdnnl.so ..`
-in config.cmake change path in USE_MKLDNN and USE_DNNL_CODEGEN to ON
-
-Last main commit does not work:
-TVMError: 
----------------------------------------------------------------
-An error occurred during the execution of TVM.
-For more information, please see: https://tvm.apache.org/docs/errors.html
----------------------------------------------------------------
-  Check failed: (it != type_key2index_.end()) is false: Cannot find type runtime.profiling.MetricCollector. Did you forget to register the node by TVM_REGISTER_NODE_TYPE ?
 
 
-Using commit: 1d7a9e9dff1983cd4b12104f93b32bfe4b4c4f7e
-Sun Jul 11 21:29:11 2021 -0500
-
-tvm/tests/python/relay:
-test_external_codegen.py
+TODO:
+-----
+* Compile the C++ OneDNN wrapper developed by Guillaume and use it as an
+external library with TVM. The idea is to be able to switch inside TVM between
+using TTILE and using OneDNN.
+    - Hugo tried to use OneDNN directly within TVM (compiling libtvm.so with what
+    they call USE_MKLDNN) but the perfromance were much worst on MobilNet
+    convolution than using OneDNN with matmul_bench.
