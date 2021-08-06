@@ -137,8 +137,10 @@ def conv2d_strategy_cpu(attrs, inputs, out_type, target):
         ## Adding CONV2d by TTILE
         elif layout == "NHWC":
             if "ttile" in target.libs:
+                print("Calling our ttile schedule")
+                assert kernel_layout == "HWIO"
                 strategy.add_implementation(
-                    wrap_compute_conv2d(topi.nn.conv2d_nhwc, need_auto_scheduler_layout=True),
+                    wrap_compute_conv2d(topi.nn.conv2d_nhwc),
                     wrap_topi_schedule(topi.x86.schedule_conv2d_nhwc_ttile),
                     name="conv2d_nhwc_ttile.x86",
                 )
