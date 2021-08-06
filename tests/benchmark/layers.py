@@ -89,12 +89,13 @@ def conv2d(data, weight=None, **kwargs):
     padding = kwargs.get("padding")
     kernels = kwargs["kernel_size"]
     stride = kwargs["strides"]
-    print("Convolution:",name)
-    print(kwargs.values())
-    print("Channels:",c)
-    print("Padding:",padding)
-    print("Kernels:",kernels)
-    print("stride:",stride)
+    #print("Convolution:",name)
+    ##print(kwargs.values())
+    #print("Channels:",c)
+    #print("Padding:",padding)
+    #print("Kernels:",kernels)
+    #print("stride:",stride)
+    print(kwargs["data_layout"])
     if not weight:
         weight = relay.var(name + "_weight")
     return relay.nn.conv2d(data, weight, **kwargs)

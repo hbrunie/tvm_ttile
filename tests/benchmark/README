@@ -1,4 +1,12 @@
-
+Execute:
+--------
+Don't forget to set:
+```
+export TVM_HOME=/path/to/tvm_ttile/
+export PYTHONPATH=$TVM_HOME/python:${PYTHONPATH}
+```
+then execute with:
+    * `python3 main.py`
 
 TODO:
 -----
