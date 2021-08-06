@@ -86,42 +86,90 @@ from .tensor_intrin import  intrin_conv
 from .tensor_intrin import  conv_impl
 
 import pickle
+##TODO: make it automatic for abspath
+def resnet_name_from_number(n, abspath = "/home/hbrunie/tvm/ttile/conv2d/tensorize/results_random",
+                            avxtype="avx512", machine="pinocchio",CNN="ResNet18",nbthreads=1):
+    "Returns CSV fname from conv2d number + abspath + machine"
+    res = "/result_{}_{}_{}_{}_".format(nbthreads,avxtype,machine,CNN)
+    res = abspath + res
+    # numbers with only one figure
+    if n <10:
+        return res+f"0{n}.csv"
+    else:# numbers with two figures
+        return res+f"{n}.csv"
+
+##TODO: make it automatic for abspath
+def get_pkl_fname_from_dataFrame(df,abspath="/home/hbrunie/tvm/ttile/conv2d/tensorize/"):
+    """
+    """
+    #df = df[["Time(ms)","InfottilePickleName"]]
+    ## Sort from best to worst measure performance
+    df = df.sort_values(by="Time(ms)",ascending=True).copy()
+    ## Extract pickle file name corresponding to best performance kernel
+    best_pkl = str(df["InfottilePickleName"].values[0])
+    ## append arbitrary absolute path to situate directory
+    best_path = abspath + best_pkl
+    return best_path
+
+conv2d_CNN_counter = 1
+import pandas as pd
 def schedule_conv2d_nhwc_ttile(outs):
+    global conv2dttile_counter 
+    global counter_total
+
     """Create schedule for conv2d_nhwc"""
-    old_outs = outs
+    ## Read CSV with performance measurement from TTILE training
+    global conv2d_CNN_counter
+    csv_fname = resnet_name_from_number(conv2d_CNN_counter)
+    print(csv_fname)
+    df = pd.read_csv(csv_fname,sep=";")
+    conv2d_CNN_counter += 1
+    pkl_fname = get_pkl_fname_from_dataFrame(df)
+    print(pkl_fname)
     outs = [outs] if isinstance(outs, te.tensor.Tensor) else outs
     s = te.create_schedule([x.op for x in outs])
     output_op = outs[0].op
     Out1 = outs[0]
-
+    ## Treat conv2d not handled by TTILE framework (due to fusion between operator for example)
+    if Out1.op.name not in ["Conv2dOutput"]:
+        return schedule_conv2d_nhwc(outs)
     ## TTILE Schedule
-    locals()["axe_batch1_0"], locals()["axe_xx1_0"], locals()["axe_yy1_0"], locals()["axe_out_channels1_0"] = Out1.op.axis
-    locals()["axe_in_channels1_0"], locals()["axe_h1_0"], locals()["axe_w1_0"] = Out1.op.reduce_axis
-    ## Switch between different convolutions for ResNet18
-    print("Convolution sizes:")
-    print(axe_batch1_0, axe_xx1_0, axe_yy1_0, axe_out_channels1_0)
-    return schedule_conv2d_nhwc(outs)
-    ## Load info_tile from already compute best schedules
-    info_tile_pickle_path="path/to/info_tile.pkl"
-    info_tile = pickle.load(info_tile_pickle_path)
+    Nbatch, xaxis, yaxis, cout = Out1.op.axis
+    ## Decompose just for reducing text per line
+    ## Parallel axes
+    locals()["axe_batch1_0"] = Nbatch
+    locals()["axe_xx1_0"] = xaxis
+    locals()["axe_yy1_0"] = yaxis
+    locals()["axe_out_channels1_0"] = cout
+    ## Reduction axes
+    locals()["axe_h1_0"], locals()["axe_w1_0"],locals()["axe_in_channels1_0"]  = Out1.op.reduce_axis
+    ##TODO remove commented debug print
+    #print("Convolution sizes:")
+    #print("x,y,c,f,h,w,stride")
+    #print(locals()["axe_xx1_0"].dom.extent)
+    #tmp_list = [locals()["axe_xx1_0"], locals()["axe_yy1_0"], locals()["axe_in_channels1_0"], locals()["axe_out_channels1_0"], locals()["axe_h1_0"], locals()["axe_w1_0"]]
+    #print(" ".join([str(x.dom.extent) for x in tmp_list]+["??"]))
+    ## Load info_ttile from already compute best schedules
+    with open(pkl_fname, 'rb') as inf:
+        info_ttile = pickle.load(inf)
     for id_conv in [1]:
         for factor in ["factor_out_channels", "factor_yy", "factor_xx", "factor_in_channels", "factor_h", "factor_w"]:
-            for nb_factor in range(len(info_tile[id_conv][factor])):
-                locals()[factor + str(id_conv) + "_" + str(nb_factor)] = info_tile[id_conv][factor][nb_factor]
+            for nb_factor in range(len(info_ttile[id_conv][factor])):
+                locals()[factor + str(id_conv) + "_" + str(nb_factor)] = info_ttile[id_conv][factor][nb_factor]
     for id_conv in [1]:
         for name_axe in ["out_channels", "xx", "yy", "in_channels", "h", "w"]:
             factor = "factor_" + name_axe
-            for nb_factor in range(len(info_tile[id_conv][factor])):
+            for nb_factor in range(len(info_ttile[id_conv][factor])):
                 axe0 = "axe_" + name_axe + str(id_conv) + "_" + str(nb_factor)
                 axe1 = "axe_" + name_axe + str(id_conv) + "_" + str(nb_factor + 1)
                 locals()[axe0], locals()[axe1] = s[Out1].split(locals()[axe0], factor = locals()["factor_" + name_axe + str(id_conv) + "_" + str(nb_factor)])
     order1 = []
-    order_string1 = info_tile[1]["order"]
+    order_string1 = info_ttile[1]["order"]
     order1 = [locals()["axe_batch1_0"]]
     for k in order_string1:
         order1 += [locals()[k]]
     s[Out1].reorder(*order1)
-    fuse1 = info_tile[1]["fuse"]
+    fuse1 = info_ttile[1]["fuse"]
     if len(fuse1) != 0:
         if len(fuse1) > 1:
             fuse_loop1 = s[Out1].fuse(locals()[fuse1[0]], locals()[fuse1[1]])
@@ -131,18 +179,22 @@ def schedule_conv2d_nhwc_ttile(outs):
             fuse_loop1 = locals()[fuse1[0]]
         s[Out1].parallel(fuse_loop1)
     stride_w = stride_h = 1
-    conv1 = intrin_conv("gen_conv", info_tile[1]["w_t"], info_tile[1]["h_t"], info_tile[1]["c_t"], info_tile[1]["f_t"], info_tile[1]["x_t"], info_tile[1]["y_t"], stride_w, stride_h)
+    conv1 = intrin_conv("gen_conv", info_ttile[1]["w_t"], info_ttile[1]["h_t"], info_ttile[1]["c_t"], info_ttile[1]["f_t"], info_ttile[1]["x_t"], info_ttile[1]["y_t"], stride_w, stride_h)
     version_avx = "avx512"
     if version_avx == "avx2":
+        files = [info_ttile[1]["file"]]
         target = "llvm -mcpu=core-avx2"
         option_compilation = ["-mavx2", "-mfma"]
     else:
+        files = [info_ttile[1]["file"], info_ttile[2]["file"]]
         target = "llvm -mcpu=skylake-avx512"
         option_compilation = ["-mavx512f", "-mfma"]
     ## List files with one or two elements: without or with Lambda micro kernels
-    files = ["path/to/Cfile_microkernel.c"]
-    s[Out1].tensorize(locals()[info_tile[1]["axe_to_tensorize"]], conv1)
+    #files = ["path/to/Cfile_microkernel.c"]
+    s[Out1].tensorize(locals()[info_ttile[1]["axe_to_tensorize"]], conv1)
     s[Out1].pragma(locals()["axe_batch1_0"], "import_llvm", conv_impl(option_compilation, files))
+    print(s.tolower())
+    exit(0)
 
     def _callback(op):
         if "conv2d_nhwc" in op.tag:
@@ -176,7 +228,7 @@ def schedule_conv2d_nhwc_ttile(outs):
                 if C != O:
                     s[C].compute_at(s[O], c)
 
-    traverse_inline(s, output_op, _callback)
+    #traverse_inline(s, output_op, _callback)
     return s
 
 def schedule_conv2d_nhwc(outs):
