@@ -1,5 +1,8 @@
 # TTile
 
+Most of these files are copied from TVM+TTILE developed by S. Pouget (restricted gitlab).
+Here is just what is necessary to run the full CNN with tvm.
+
 ## Idea
 
 Use [TTile](https://hal.archives-ouvertes.fr/hal-03149553) in Apache TVM.
